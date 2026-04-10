@@ -1,0 +1,233 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #f5f5f5;
+  padding: 0 0 60px;
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 24px;
+}
+
+.logo { display: flex; align-items: baseline; gap: 2px; }
+.logo-dock { font-size: 22px; font-weight: 900; color: #1a1a1a; letter-spacing: -1px; }
+.logo-x    { font-size: 22px; font-weight: 900; color: #e63329; letter-spacing: -1px; }
+.logo-rental { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: #666; margin-left: 4px; align-self: flex-end; }
+
+/* Language switcher */
+.lang-switcher { display: flex; gap: 4px; }
+.lang-switcher button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+.lang-switcher button.active {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+/* Main container */
+.form-container, .admin-container, .login-card, .success-card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 32px;
+}
+
+h1 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #1a1a1a; }
+.form-subtitle { font-size: 13px; color: #555; margin-bottom: 24px; line-height: 1.6; }
+
+/* Sections */
+.section-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  margin: 20px 0 14px;
+  border-radius: 3px;
+}
+
+/* Form groups */
+.form-row { display: flex; gap: 16px; }
+.form-row .form-group { flex: 1; }
+
+.form-group { margin-bottom: 14px; }
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.required { color: #e63329; margin-left: 2px; }
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 13px;
+  color: #333;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: #666; }
+
+textarea { resize: vertical; min-height: 80px; }
+
+.form-group.error input,
+.form-group.error textarea { border-color: #e63329; }
+
+.error-msg { font-size: 12px; color: #e63329; margin-top: 3px; display: block; }
+
+/* Radio group */
+.radio-group { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.radio-label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
+.radio-label input { width: auto; }
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  color: #888;
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.drop-zone:hover, .drop-zone.dragging {
+  border-color: #666;
+  background: #fafafa;
+}
+.drop-zone .link { color: #0066cc; text-decoration: underline; cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.allowed-types { font-size: 11px; color: #999; margin-top: 4px; }
+
+/* File list */
+.file-list { list-style: none; margin-top: 8px; }
+.file-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: #f9f9f9;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.file-list li span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-size { color: #888; flex-shrink: 0; }
+.file-list button {
+  background: none;
+  border: none;
+  color: #e63329;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+/* Submit button */
+.btn-submit {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 20px;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-submit:hover:not(:disabled) { background: #333; }
+.btn-submit:disabled { background: #999; cursor: not-allowed; }
+
+/* Success card */
+.success-card { text-align: center; padding: 48px 32px; }
+.success-card h2 { font-size: 20px; margin-bottom: 8px; color: #2e7d32; }
+
+/* Admin */
+.login-card { max-width: 360px; margin-top: 60px; }
+.login-card h1 { margin-bottom: 20px; }
+
+.admin-container { max-width: 1100px; padding: 24px; }
+.admin-container h1 { margin-bottom: 16px; }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+}
+.filters input, .filters select { width: auto; padding: 5px 8px; font-size: 12px; }
+.btn-export {
+  padding: 5px 12px;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-export:hover { background: #333; }
+.btn-logout { padding: 5px 12px; background: #fff; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; cursor: pointer; }
+
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #e8e8e8; white-space: nowrap; }
+th { background: #f5f5f5; font-weight: 600; color: #555; font-size: 11px; text-transform: uppercase; }
+tr:hover td { background: #fafafa; }
+
+.pagination { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: 13px; }
+.pagination button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.pagination button:disabled { opacity: 0.4; cursor: default; }
+
+@media (max-width: 600px) {
+  .form-row { flex-direction: column; }
+  header { flex-direction: column; gap: 12px; }
+}
