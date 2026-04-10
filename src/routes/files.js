@@ -5,8 +5,15 @@ const fs = require('fs');
 const { requireAdminToken } = require('../middleware/auth');
 
 router.get('/uploads/:filename', requireAdminToken, (req, res) => {
+  const raw = req.params.filename;
   // path.basename strips any directory component — prevents traversal
-  const filename = path.basename(req.params.filename);
+  const filename = path.basename(raw);
+
+  // If basename changed the input, it contained directory traversal
+  if (filename !== raw) {
+    return res.status(400).json({ error: 'Invalid filename' });
+  }
+
   const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
   const filePath = path.join(uploadDir, filename);
 

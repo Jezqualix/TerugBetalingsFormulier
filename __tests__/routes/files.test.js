@@ -40,7 +40,6 @@ describe('GET /api/uploads/:filename', () => {
     const res = await request(app)
       .get('/api/uploads/..%2F..%2Fetc%2Fpasswd')
       .set('Authorization', AUTH);
-    // Either 400 (blocked) or 404 (not found) — both acceptable, not 200
-    expect([400, 404]).toContain(res.status);
+    expect(res.status).toBe(400);
   });
 });
