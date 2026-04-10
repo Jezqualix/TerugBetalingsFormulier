@@ -7,12 +7,13 @@ const { streamCsv, streamXlsx } = require('../services/exportService');
 router.get('/submissions', requireAdminToken, async (req, res) => {
   try {
     const { from, to, status, page, pageSize } = req.query;
+    const toInt = (val, fallback) => { const n = parseInt(val, 10); return Number.isFinite(n) && n > 0 ? n : fallback; };
     const result = await listSubmissions({
       from,
       to,
       status,
-      page: parseInt(page || '1', 10),
-      pageSize: parseInt(pageSize || '20', 10),
+      page: toInt(page, 1),
+      pageSize: toInt(pageSize, 20),
     });
     res.json(result);
   } catch (err) {
