@@ -11,20 +11,49 @@ const filesRouter = require('./routes/files');
 
 const app = express();
 
-app.use(helmet());
+// Trust proxy for correct IP detection behind IIS ARR / Nginx
+app.set('trust proxy', 1);
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'cdn.jsdelivr.net'],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+      },
+    },
+  })
+);
+
 app.use(cookieParser(process.env.COOKIE_SECRET || 'dev-cookie-secret'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// CSRF token endpoint (must come before static files so it's served as API)
 app.get('/api/csrf-token', (req, res) => {
   res.json({ token: generateToken(req, res) });
 });
 
+// API routes
 app.use('/api/submissions', submissionsRouter);
 app.use('/api', adminRouter);
 app.use('/api', filesRouter);
 
-// Error handler
+// Static frontend files
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// SPA fallback for /admin
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+});
+
+// Global error handler
 app.use((err, req, res, next) => {
   if (err.message === 'invalid csrf token') {
     return res.status(403).json({ error: 'Invalid CSRF token' });
@@ -36,6 +65,6 @@ app.use((err, req, res, next) => {
 module.exports = app;
 
 if (require.main === module) {
-  const PORT = process.env.PORT || 3004;
+  const PORT = parseInt(process.env.PORT || '3004', 10);
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
