@@ -1,5 +1,6 @@
 const fastCsv = require('fast-csv');
 const ExcelJS = require('exceljs');
+const { pipeline } = require('stream');
 
 const COLUMNS = [
   { header: 'ID',                  key: 'id' },
@@ -30,9 +31,14 @@ function streamCsv(rows, res) {
   res.setHeader('Content-Disposition', 'attachment; filename="submissions.csv"');
 
   const csvStream = fastCsv.format({ headers: true });
-  csvStream.pipe(res);
   for (const row of rows) csvStream.write(toRow(row));
   csvStream.end();
+
+  pipeline(csvStream, res, (err) => {
+    if (err && err.code !== 'ERR_STREAM_DESTROYED') {
+      console.error('[exportService] CSV pipeline error:', err.message);
+    }
+  });
 }
 
 async function streamXlsx(rows, res) {
