@@ -19,6 +19,7 @@ describe('requireAdminToken', () => {
       .get('/protected')
       .set('Authorization', 'Bearer wrong-token');
     expect(res.status).toBe(401);
+    expect(res.body.error).toBe('Unauthorized');
   });
 
   it('returns 401 with malformed header (no Bearer prefix)', async () => {
