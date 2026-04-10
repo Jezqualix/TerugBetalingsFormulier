@@ -7,6 +7,7 @@ const path = require('path');
 const { generateToken } = require('./middleware/csrf');
 const submissionsRouter = require('./routes/submissions');
 const adminRouter = require('./routes/admin');
+const filesRouter = require('./routes/files');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.get('/api/csrf-token', (req, res) => {
 
 app.use('/api/submissions', submissionsRouter);
 app.use('/api', adminRouter);
+app.use('/api', filesRouter);
 
 // Error handler
 app.use((err, req, res, next) => {
