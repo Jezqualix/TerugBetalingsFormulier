@@ -22,7 +22,7 @@ app.use('/api/submissions', submissionsRouter);
 
 // Error handler
 app.use((err, req, res, next) => {
-  if (err.code === 'EBADCSRFTOKEN' || err.message === 'invalid csrf token') {
+  if (err.message === 'invalid csrf token') {
     return res.status(403).json({ error: 'Invalid CSRF token' });
   }
   if (process.env.NODE_ENV !== 'production') console.error(err.message);

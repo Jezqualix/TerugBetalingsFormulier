@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 const fs = require('fs');
 
 const { doubleCsrfProtection } = require('../middleware/csrf');
@@ -20,7 +19,14 @@ router.post(
   '/',
   submitLimiter,
   doubleCsrfProtection,
-  upload.array('bijlagen', 10),
+  (req, res, next) => {
+    upload.array('bijlagen', 10)(req, res, (err) => {
+      if (err) {
+        return res.status(422).json({ errors: { bijlagen: err.message } });
+      }
+      next();
+    });
+  },
   async (req, res) => {
     const { aanvraagnummer, naam_aanvrager, email_aanvrager, type_betaling,
             naam_terugstorting, iban, omschrijving, taal } = req.body;
