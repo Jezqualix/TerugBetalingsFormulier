@@ -118,7 +118,7 @@
 
   </div><!-- /x-data -->
 
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
   <script>
     function adminApp() {
       return {
@@ -154,6 +154,7 @@
               this.token = this.tokenInput;
               localStorage.setItem('dockx_admin_token', this.token);
               this.authenticated = true;
+              this.tokenInput = '';
               this.$nextTick(() => this.loadSubmissions());
             } else {
               this.loginError = true;
