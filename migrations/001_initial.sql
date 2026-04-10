@@ -23,3 +23,6 @@ CREATE TABLE uploads (
   size_bytes      INT                NOT NULL,
   created_at      DATETIME2          NOT NULL CONSTRAINT DF_uploads_created DEFAULT GETDATE()
 );
+
+CREATE INDEX IX_uploads_submission_id ON uploads(submission_id);
+CREATE INDEX IX_submissions_status ON submissions(status);

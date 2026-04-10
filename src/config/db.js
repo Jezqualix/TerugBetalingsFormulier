@@ -17,13 +17,16 @@ const config = {
   },
 };
 
-let pool = null;
+let poolPromise = null;
 
 async function getPool() {
-  if (!pool) {
-    pool = await sql.connect(config);
+  if (!poolPromise) {
+    poolPromise = sql.connect(config).catch((err) => {
+      poolPromise = null;
+      throw err;
+    });
   }
-  return pool;
+  return poolPromise;
 }
 
 module.exports = { getPool, sql };
