@@ -1,0 +1,9 @@
+process.env.PORT = '3005';
+process.env.ADMIN_TOKEN = 'test-admin-token-32chars-minimum-00';
+process.env.CSRF_SECRET = 'test-csrf-secret-32-chars-min-0000';
+process.env.COOKIE_SECRET = 'test-cookie-secret-32-chars-min-00';
+process.env.UPLOAD_DIR = './uploads-test';
+process.env.SMTP_HOST = 'localhost';
+process.env.SMTP_PORT = '25';
+process.env.SMTP_FROM = 'test@example.com';
+process.env.ADMIN_EMAIL = 'admin@example.com';
