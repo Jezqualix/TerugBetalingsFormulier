@@ -256,6 +256,6 @@ UPLOAD_DIR=./uploads
 ## Assumptions
 
 1. MS SQL Server instance is reachable from the Node.js host; connection string is provided in `.env.local`
-2. SMTP credentials will be provided; email is non-blocking so the app works without them
+2. SMTP credentials are not needed. E-mail is non-blocking so the app works without them
 3. The `uploads/` directory will be created on first run if it doesn't exist
 4. The admin dashboard is an internal tool — no public registration or password reset flow needed

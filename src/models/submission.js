@@ -11,14 +11,26 @@ async function createSubmission(data) {
     .input('iban',               sql.NVarChar(34),   data.iban || null)
     .input('omschrijving',       sql.NVarChar(sql.MAX), data.omschrijving || null)
     .input('taal',               sql.NVarChar(5),    data.taal || 'nl')
+    .input('reden_urgentie',              sql.NVarChar(sql.MAX), data.reden_urgentie || null)
+    .input('contract',                    sql.NVarChar(sql.MAX), data.contract || null)
+    .input('klant',                       sql.NVarChar(sql.MAX), data.klant || null)
+    .input('referentie_boete',            sql.NVarChar(255),     data.referentie_boete || null)
+    .input('vervaldatum_boete',           sql.Date,              data.vervaldatum_boete || null)
+    .input('gedetailleerde_omschrijving', sql.NVarChar(sql.MAX), data.gedetailleerde_omschrijving || null)
+    .input('onkosten_items',             sql.NVarChar(sql.MAX), data.onkosten_items || null)
+    .input('proplanner_aangevraagd',     sql.Bit,               data.proplanner_aangevraagd ? 1 : 0)
     .query(`
       INSERT INTO submissions
         (aanvraagnummer, naam_aanvrager, email_aanvrager, type_betaling,
-         naam_terugstorting, iban, omschrijving, taal)
+         naam_terugstorting, iban, omschrijving, taal,
+         reden_urgentie, contract, klant, referentie_boete, vervaldatum_boete,
+         gedetailleerde_omschrijving, onkosten_items, proplanner_aangevraagd)
       OUTPUT INSERTED.id
       VALUES
         (@aanvraagnummer, @naam_aanvrager, @email_aanvrager, @type_betaling,
-         @naam_terugstorting, @iban, @omschrijving, @taal)
+         @naam_terugstorting, @iban, @omschrijving, @taal,
+         @reden_urgentie, @contract, @klant, @referentie_boete, @vervaldatum_boete,
+         @gedetailleerde_omschrijving, @onkosten_items, @proplanner_aangevraagd)
     `);
   return result.recordset[0].id;
 }
@@ -111,6 +123,9 @@ async function getSubmissionsForExport({ from, to, status } = {}) {
     SELECT
       s.id, s.aanvraagnummer, s.naam_aanvrager, s.email_aanvrager,
       s.type_betaling, s.naam_terugstorting, s.iban, s.omschrijving,
+      s.reden_urgentie, s.contract, s.klant,
+      s.referentie_boete, s.vervaldatum_boete, s.gedetailleerde_omschrijving,
+      s.onkosten_items, s.proplanner_aangevraagd,
       s.status, s.taal, s.created_at,
       (SELECT COUNT(*) FROM uploads u WHERE u.submission_id = s.id) AS upload_count
     FROM submissions s

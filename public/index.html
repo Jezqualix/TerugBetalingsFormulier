@@ -4,275 +4,268 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DockX Rental — Terugbetalingsformulier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/style.css">
   <script src="/assets/i18n.js"></script>
 </head>
 <body>
   <div x-data="formApp()" x-init="init()">
 
-    <header>
-      <div class="logo">
-        <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
-        <span class="logo-rental">RENTAL</span>
-      </div>
-      <div class="lang-switcher">
-        <button :class="{ active: lang === 'nl' }" @click="lang = 'nl'">NL</button>
-        <button :class="{ active: lang === 'fr' }" @click="lang = 'fr'">FR</button>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <div class="logo">
+          <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
+          <span class="logo-rental">RENTAL</span>
+        </div>
+        <div class="lang-switcher">
+          <button :class="{ active: lang === 'nl' }" @click="lang = 'nl'">NL</button>
+          <button :class="{ active: lang === 'fr' }" @click="lang = 'fr'">FR</button>
+        </div>
       </div>
     </header>
 
-    <!-- Success state -->
-    <div x-show="submitted" class="form-container" style="text-align:center;padding:48px 32px;">
-      <h2 style="color:#2e7d32;margin-bottom:8px;" x-text="t('successTitle')"></h2>
-      <p x-text="t('successMsg')"></p>
-    </div>
+    <div class="page-content">
 
-    <!-- Form -->
-    <div x-show="!submitted" class="form-container">
-      <h1 x-text="t('title')"></h1>
-      <p class="form-subtitle" x-text="t('subtitle')"></p>
+      <!-- Success state -->
+      <div x-show="submitted" class="success-card">
+        <div class="success-icon">&#10003;</div>
+        <h2 x-text="t('successTitle')"></h2>
+        <p style="color:var(--text-muted);margin-top:8px;" x-text="t('successMsg')"></p>
+      </div>
 
-      <form @submit.prevent="submit" novalidate>
+      <!-- Form -->
+      <div x-show="!submitted" class="form-card">
+        <h1 x-text="t('title')"></h1>
+        <p class="form-subtitle" x-text="t('subtitle')"></p>
 
-        <!-- Aanvraagnummer -->
-        <div class="form-group">
-          <label for="aanvraagnummer" x-text="t('aanvraagnummer')"></label>
-          <input id="aanvraagnummer" type="text" x-model="form.aanvraagnummer">
-        </div>
+        <form @submit.prevent="submit" novalidate>
 
-        <!-- Aanvrager Details -->
-        <div class="section-header" x-text="t('aanvragerDetails')"></div>
-        <div class="form-row">
-          <div class="form-group" :class="{ error: errors.naam_aanvrager }">
-            <label for="naam_aanvrager">
-              <span x-text="t('naamAanvrager')"></span><span class="required">*</span>
-            </label>
-            <input id="naam_aanvrager" type="text" x-model="form.naam_aanvrager">
-            <span class="error-msg" x-show="errors.naam_aanvrager" x-text="t('required')"></span>
+          <!-- Aanvraagnummer -->
+          <div class="form-group">
+            <label for="aanvraagnummer" x-text="t('aanvraagnummer')"></label>
+            <input id="aanvraagnummer" type="text" x-model="form.aanvraagnummer">
           </div>
-          <div class="form-group" :class="{ error: errors.email_aanvrager }">
-            <label for="email_aanvrager">
-              <span x-text="t('emailAanvrager')"></span><span class="required">*</span>
-            </label>
-            <input id="email_aanvrager" type="email" x-model="form.email_aanvrager">
-            <span class="error-msg" x-show="errors.email_aanvrager" x-text="errors.email_aanvrager || t('invalidEmail')"></span>
-          </div>
-        </div>
 
-        <!-- Type betaling -->
-        <div class="form-group" :class="{ error: errors.type_betaling }">
-          <label>
-            <span x-text="t('typeBetaling')"></span><span class="required">*</span>
-          </label>
-          <div class="radio-group">
-            <template x-for="type in ['onkostennota', 'dringend', 'korting', 'andere']" :key="type">
-              <label class="radio-label">
-                <input type="radio" :value="type" x-model="form.type_betaling">
-                <span x-text="t('types')[type]"></span>
+          <!-- Aanvrager Details -->
+          <div class="section-header" x-text="t('aanvragerDetails')"></div>
+          <div class="form-row">
+            <div class="form-group" :class="{ error: errors.naam_aanvrager }">
+              <label for="naam_aanvrager">
+                <span x-text="t('naamAanvrager')"></span><span class="required">*</span>
               </label>
-            </template>
+              <input id="naam_aanvrager" type="text" x-model="form.naam_aanvrager">
+              <span class="error-msg" x-show="errors.naam_aanvrager" x-text="t('required')"></span>
+            </div>
+            <div class="form-group" :class="{ error: errors.email_aanvrager }">
+              <label for="email_aanvrager">
+                <span x-text="t('emailAanvrager')"></span><span class="required">*</span>
+              </label>
+              <input id="email_aanvrager" type="email" x-model="form.email_aanvrager">
+              <span class="error-msg" x-show="errors.email_aanvrager" x-text="errors.email_aanvrager || t('invalidEmail')"></span>
+            </div>
           </div>
-          <span class="error-msg" x-show="errors.type_betaling" x-text="t('required')"></span>
-        </div>
 
-        <!-- Algemene Bedrijfsgegevens -->
-        <div class="section-header" x-text="t('algemeneBedrijfsgegevens')"></div>
+          <!-- Type betaling -->
+          <div class="form-group" :class="{ error: errors.type_betaling }">
+            <label>
+              <span x-text="t('typeBetaling')"></span><span class="required">*</span>
+            </label>
+            <div class="radio-group">
+              <template x-for="type in ['onkostennota', 'dringend', 'brandstof', 'boete', 'andere']" :key="type">
+                <label class="radio-label">
+                  <input type="radio" :value="type" x-model="form.type_betaling">
+                  <span x-text="t('types')[type]"></span>
+                </label>
+              </template>
+            </div>
+            <span class="error-msg" x-show="errors.type_betaling" x-text="t('required')"></span>
+          </div>
 
-        <div class="form-group" :class="{ error: errors.naam_terugstorting }">
-          <label for="naam_terugstorting">
-            <span x-text="t('naamTerugstorting')"></span><span class="required">*</span>
-          </label>
-          <input id="naam_terugstorting" type="text" x-model="form.naam_terugstorting">
-          <span class="error-msg" x-show="errors.naam_terugstorting" x-text="t('required')"></span>
-        </div>
+          <!-- Algemene Bedrijfsgegevens -->
+          <div class="section-header" x-text="t('algemeneBedrijfsgegevens')"></div>
 
-        <div class="form-group">
-          <label for="iban" x-text="t('iban')"></label>
-          <input id="iban" type="text" x-model="form.iban" placeholder="BE00 0000 0000 0000">
-        </div>
+          <div class="form-group" :class="{ error: errors.naam_terugstorting }">
+            <label for="naam_terugstorting">
+              <span x-text="t('naamTerugstorting')"></span><span class="required">*</span>
+            </label>
+            <input id="naam_terugstorting" type="text" x-model="form.naam_terugstorting">
+            <span class="error-msg" x-show="errors.naam_terugstorting" x-text="t('required')"></span>
+          </div>
 
-        <div class="form-group">
-          <label for="omschrijving" x-text="t('omschrijving')"></label>
-          <textarea id="omschrijving" x-model="form.omschrijving" rows="4"></textarea>
-        </div>
+          <div class="form-group" :class="{ error: errors.iban }">
+            <label for="iban" x-text="t('iban')"></label>
+            <input id="iban" type="text" x-model="form.iban" placeholder="BE00 0000 0000 0000">
+            <span class="error-msg" x-show="errors.iban" x-text="t('invalidIban')"></span>
+          </div>
 
-        <!-- Bijlagen -->
-        <div class="form-group">
-          <label x-text="t('bijlagen')"></label>
-          <div
-            class="drop-zone"
-            :class="{ dragging: isDragging }"
-            @dragover.prevent="isDragging = true"
-            @dragleave.prevent="isDragging = false"
-            @drop.prevent="handleDrop($event)"
-            @click="$refs.fileInput.click()"
-          >
-            <input
-              type="file"
-              x-ref="fileInput"
-              multiple
-              class="sr-only"
-              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.xlsx,.zip"
-              @change="handleFileChange($event)"
+          <div class="form-group">
+            <label for="omschrijving" x-text="t('omschrijving')"></label>
+            <textarea id="omschrijving" x-model="form.omschrijving" rows="4"></textarea>
+          </div>
+
+          <!-- Bijlagen -->
+          <div class="form-group">
+            <label x-text="t('bijlagen')"></label>
+            <div
+              class="drop-zone"
+              :class="{ dragging: isDragging }"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleDrop($event)"
+              @click="$refs.fileInput.click()"
             >
-            <p>
-              <span x-text="t('dropFiles')"></span>&nbsp;<span class="link" x-text="t('browse')"></span>
-            </p>
-          </div>
-          <p class="allowed-types" x-text="t('allowedTypes')"></p>
+              <input
+                type="file"
+                x-ref="fileInput"
+                multiple
+                class="sr-only"
+                accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.xlsx,.zip"
+                @change="handleFileChange($event)"
+              >
+              <p>
+                <span x-text="t('dropFiles')"></span>&nbsp;<span class="link" x-text="t('browse')"></span>
+              </p>
+            </div>
+            <p class="allowed-types" x-text="t('allowedTypes')"></p>
 
-          <ul class="file-list" x-show="files.length > 0">
-            <template x-for="(file, i) in files" :key="i">
-              <li>
-                <span x-text="file.name"></span>
-                <span class="file-size" x-text="formatSize(file.size)"></span>
-                <button type="button" @click="removeFile(i)" x-text="t('remove')"></button>
-              </li>
+            <ul class="file-list" x-show="files.length > 0">
+              <template x-for="(file, i) in files" :key="i">
+                <li>
+                  <span x-text="file.name"></span>
+                  <span class="file-size" x-text="formatSize(file.size)"></span>
+                  <button type="button" @click="removeFile(i)" x-text="t('remove')"></button>
+                </li>
+              </template>
+            </ul>
+
+            <template x-for="err in fileErrors" :key="err">
+              <span class="error-msg" x-text="err"></span>
             </template>
-          </ul>
+          </div>
 
-          <template x-for="err in fileErrors" :key="err">
-            <span class="error-msg" x-text="err"></span>
+          <!-- Onkostennota Details -->
+          <template x-if="form.type_betaling === 'onkostennota'">
+            <div>
+              <div class="section-header" x-text="t('onkostennotaDetails')"></div>
+              <label x-text="t('onkostenItems')"></label>
+              <div class="expense-table">
+                <div class="expense-header">
+                  <div><span x-text="t('datumUitgave')"></span><span class="required">*</span></div>
+                  <div><span x-text="t('omschrijvingUitgave')"></span><span class="required">*</span></div>
+                  <div><span x-text="t('bedragUitgave')"></span><span class="required">*</span></div>
+                  <div></div>
+                </div>
+                <template x-for="(item, i) in onkostenItems" :key="i">
+                  <div class="expense-row">
+                    <input type="date" x-model="item.datum"
+                      :class="{ 'input-error': errors.onkosten_items && !item.datum }">
+                    <input type="text" x-model="item.omschrijving"
+                      :class="{ 'input-error': errors.onkosten_items && !item.omschrijving.trim() }">
+                    <input type="text" x-model="item.bedrag" inputmode="decimal"
+                      :class="{ 'input-error': errors.onkosten_items && !item.bedrag.trim() }">
+                    <button type="button" class="expense-remove" @click="removeOnkostenItem(i)" title="Verwijder">&times;</button>
+                  </div>
+                </template>
+              </div>
+              <span class="error-msg" x-show="errors.onkosten_items" x-text="t('required')"></span>
+              <button type="button" class="btn-add-item" @click="addOnkostenItem()" x-text="t('addItem')"></button>
+            </div>
           </template>
-        </div>
 
-        <span class="error-msg" x-show="submitError" x-text="t('errorMsg')"></span>
+          <!-- Dringende Terugstorting Details -->
+          <template x-if="form.type_betaling === 'dringend'">
+            <div>
+              <div class="section-header" x-text="t('dringendeDetails')"></div>
+              <div class="form-group" :class="{ error: errors.reden_urgentie }">
+                <label for="reden_urgentie">
+                  <span x-text="t('redenUrgentie')"></span><span class="required">*</span>
+                </label>
+                <textarea id="reden_urgentie" x-model="form.reden_urgentie" rows="3"></textarea>
+                <span class="error-msg" x-show="errors.reden_urgentie" x-text="t('required')"></span>
+              </div>
+              <div class="form-group">
+                <label for="contract_dringend" x-text="t('contract')"></label>
+                <textarea id="contract_dringend" x-model="form.contract" rows="3"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="klant_dringend" x-text="t('klant')"></label>
+                <textarea id="klant_dringend" x-model="form.klant" rows="3"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" x-model="form.proplanner_aangevraagd">
+                  <span x-text="t('proplannerAangevraagd')"></span>
+                </label>
+              </div>
+            </div>
+          </template>
 
-        <button type="submit" class="btn-submit" :disabled="submitting">
-          <span x-text="submitting ? t('submitting') : t('submit')"></span>
-        </button>
+          <!-- Brandstof Terugbetaling Details -->
+          <template x-if="form.type_betaling === 'brandstof'">
+            <div>
+              <div class="section-header" x-text="t('brandstofDetails')"></div>
+              <div class="form-group">
+                <label for="contract_brandstof" x-text="t('contract')"></label>
+                <textarea id="contract_brandstof" x-model="form.contract" rows="3"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="klant_brandstof" x-text="t('klant')"></label>
+                <textarea id="klant_brandstof" x-model="form.klant" rows="3"></textarea>
+              </div>
+            </div>
+          </template>
 
-      </form>
-    </div><!-- /.form-container -->
+          <!-- Boete Details -->
+          <template x-if="form.type_betaling === 'boete'">
+            <div>
+              <div class="section-header" x-text="t('boeteDetails')"></div>
+              <div class="form-group" :class="{ error: errors.referentie_boete }">
+                <label for="referentie_boete">
+                  <span x-text="t('referentieBoete')"></span><span class="required">*</span>
+                </label>
+                <input id="referentie_boete" type="text" x-model="form.referentie_boete">
+                <span class="error-msg" x-show="errors.referentie_boete" x-text="t('required')"></span>
+              </div>
+              <div class="form-group" :class="{ error: errors.vervaldatum_boete }">
+                <label for="vervaldatum_boete">
+                  <span x-text="t('vervaldatumBoete')"></span><span class="required">*</span>
+                </label>
+                <input id="vervaldatum_boete" type="date" x-model="form.vervaldatum_boete">
+                <span class="error-msg" x-show="errors.vervaldatum_boete" x-text="t('required')"></span>
+              </div>
+            </div>
+          </template>
+
+          <!-- Andere Terugbetaling Details -->
+          <template x-if="form.type_betaling === 'andere'">
+            <div>
+              <div class="section-header" x-text="t('andereDetails')"></div>
+              <div class="form-group" :class="{ error: errors.gedetailleerde_omschrijving }">
+                <label for="gedetailleerde_omschrijving">
+                  <span x-text="t('gedetailleerdeOmschrijving')"></span><span class="required">*</span>
+                </label>
+                <textarea id="gedetailleerde_omschrijving" x-model="form.gedetailleerde_omschrijving" rows="4"></textarea>
+                <span class="error-msg" x-show="errors.gedetailleerde_omschrijving" x-text="t('required')"></span>
+              </div>
+            </div>
+          </template>
+
+          <span class="error-msg" x-show="submitError" x-text="t('errorMsg')"></span>
+
+          <button type="submit" class="btn-cta" :disabled="submitting">
+            <span x-text="submitting ? t('submitting') : t('submit')"></span>
+          </button>
+
+        </form>
+      </div>
+
+    </div><!-- /.page-content -->
 
   </div><!-- /x-data -->
 
+  <script src="/assets/form.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
-  <script>
-    function formApp() {
-      return {
-        lang: 'nl',
-        form: {
-          aanvraagnummer: '',
-          naam_aanvrager: '',
-          email_aanvrager: '',
-          type_betaling: '',
-          naam_terugstorting: '',
-          iban: '',
-          omschrijving: '',
-        },
-        files: [],
-        fileErrors: [],
-        errors: {},
-        submitting: false,
-        submitted: false,
-        submitError: false,
-        isDragging: false,
-        csrfToken: '',
-
-        t(key) {
-          const parts = key.split('.');
-          let val = window.i18n[this.lang];
-          for (const p of parts) val = val?.[p];
-          return val !== undefined ? val : key;
-        },
-
-        async init() {
-          try {
-            const res = await fetch('/api/csrf-token');
-            const data = await res.json();
-            this.csrfToken = data.token;
-          } catch (e) {
-            console.error('Could not fetch CSRF token');
-          }
-        },
-
-        handleFileChange(event) {
-          this.addFiles(Array.from(event.target.files));
-          event.target.value = '';
-        },
-
-        handleDrop(event) {
-          this.isDragging = false;
-          this.addFiles(Array.from(event.dataTransfer.files));
-        },
-
-        addFiles(newFiles) {
-          this.fileErrors = [];
-          const MAX = 2 * 1024 * 1024;
-          const ALLOWED = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.docx', '.xlsx', '.zip']);
-
-          for (const file of newFiles) {
-            if (this.files.length >= 10) {
-              this.fileErrors.push(this.t('maxFiles'));
-              break;
-            }
-            const ext = '.' + file.name.split('.').pop().toLowerCase();
-            if (!ALLOWED.has(ext)) {
-              this.fileErrors.push(`${file.name}: ${this.t('fileTypeNotAllowed')}`);
-              continue;
-            }
-            if (file.size > MAX) {
-              this.fileErrors.push(`${file.name}: ${this.t('fileTooLarge')}`);
-              continue;
-            }
-            this.files.push(file);
-          }
-        },
-
-        removeFile(i) { this.files.splice(i, 1); },
-
-        formatSize(b) {
-          if (b < 1024) return b + ' B';
-          if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
-          return (b / 1024 / 1024).toFixed(1) + ' MB';
-        },
-
-        validate() {
-          this.errors = {};
-          if (!this.form.naam_aanvrager.trim()) this.errors.naam_aanvrager = true;
-          if (!this.form.email_aanvrager.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.form.email_aanvrager)) {
-            this.errors.email_aanvrager = this.t('invalidEmail');
-          }
-          if (!this.form.type_betaling) this.errors.type_betaling = true;
-          if (!this.form.naam_terugstorting.trim()) this.errors.naam_terugstorting = true;
-          return Object.keys(this.errors).length === 0;
-        },
-
-        async submit() {
-          if (!this.validate()) return;
-          this.submitting = true;
-          this.submitError = false;
-
-          const fd = new FormData();
-          for (const [k, v] of Object.entries(this.form)) fd.append(k, v);
-          fd.append('taal', this.lang);
-          for (const file of this.files) fd.append('bijlagen', file);
-
-          try {
-            const res = await fetch('/api/submissions', {
-              method: 'POST',
-              headers: { 'x-csrf-token': this.csrfToken },
-              body: fd,
-            });
-            if (res.ok) {
-              this.submitted = true;
-            } else {
-              const data = await res.json().catch(() => ({}));
-              if (data.errors) {
-                this.errors = data.errors;
-              } else {
-                this.submitError = true;
-              }
-            }
-          } catch (e) {
-            this.submitError = true;
-          } finally {
-            this.submitting = false;
-          }
-        },
-      };
-    }
-  </script>
 </body>
 </html>

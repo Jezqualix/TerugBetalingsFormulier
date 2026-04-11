@@ -1,0 +1,150 @@
+Je bent een senior full-stack developer en solution architect.
+
+Belangrijk:
+- Gebruik verplicht Context7 voor alle framework-, library-, security-, upload-, database-, SMTP-, export- en deploymentkeuzes.
+- Voeg in je werkwijze expliciet “use context7” toe en haal actuele documentatie op voor elke technologie die je gebruikt.
+- Als er meerdere technologie-opties zijn, kies de meest stabiele en onderhoudbare optie voor een Windows/IIS én Debian/Nginx omgeving.
+- Werk production-minded, veilig en volledig.
+- Lever geen half prototype, maar een degelijk werkend projectvoorstel met code en configuratie.
+
+Doel:
+Maak een webformulier dat functioneel en visueel sterk lijkt op het formulier in deze screenshot:
+screenshots/share.teamforms.app_form.png
+
+Projectdoel:
+- Bouw een webformulier/webapplicatie op basis van de lay-out en UX van de screenshot.
+- Alle ingegeven gegevens moeten opgeslagen worden in de database waarvan de connectiegegevens in .env.local staan.
+- Er moet ondersteuning zijn voor bestandsuploads.
+- Er moet een bevestiging of notificatie via SMTP email verstuurd kunnen worden.
+- Er moet exportfunctionaliteit aanwezig zijn.
+- Geef ook een concreet deploymentvoorstel voor zowel IIS op Windows als Nginx op Debian.
+
+Wat je eerst moet doen:
+1. Analyseer de screenshot en beschrijf kort welke velden, structuur, secties en UX-patronen je herkent.
+2. Lees en gebruik .env.local voor configuratievariabelen, maar toon secrets nooit in output.
+3. Kies een geschikte stack en verantwoord die keuze kort.
+4. Gebruik Context7 om actuele documentatie op te halen voor alle gekozen libraries/frameworks.
+
+Technische verwachtingen:
+- Maak een moderne webapp met frontend + backend.
+- De frontend moet het formulier tonen.
+- De backend moet validatie, opslag, uploadverwerking, mail en export afhandelen.
+- Code moet proper gestructureerd zijn en klaar voor lokaal gebruik en deployment.
+
+Functionele eisen:
+- Formulier op basis van de screenshot.
+- Verplichte en optionele velden duidelijk onderscheiden.
+- Server-side validatie verplicht.
+- Client-side validatie als extra, maar nooit als enige bescherming.
+- Bestandsupload moet mogelijk zijn.
+- Uploadlimiet: maximaal 2 MB per bestand.
+- Beperk toegelaten bestandstypes expliciet en veilig.
+- Bestandsnaam moet veilig verwerkt worden.
+- Data opslaan in database via configuratie uit .env.local.
+- SMTP mail verzenden na submit (bijvoorbeeld bevestiging naar gebruiker en/of notificatie naar beheerder).
+- Voorzie export van submissions, bij voorkeur CSV en indien haalbaar XLSX.
+- Voorzie een overzichtelijke admin/exportflow.
+
+Beveiligingseisen:
+- Bescherm tegen SQL injection.
+- Bescherm tegen XSS.
+- Bescherm tegen command injection.
+- Bescherm tegen path traversal bij uploads.
+- Sanitize en valideer alle input streng.
+- Voeg checks toe tegen gevaarlijke strings/payloads, maar doe dit correct: whitelist/allowlist-validatie waar mogelijk, escaping/encoding waar nodig, prepared statements voor databasequeries, veilige bestandsverwerking en MIME/type-controle.
+- Gebruik CSRF-bescherming indien relevant voor de gekozen architectuur.
+- Voeg rate limiting toe op submit endpoints.
+- Voeg veilige HTTP headers toe.
+- Zorg dat foutmeldingen veilig zijn en geen gevoelige info lekken.
+- Log veilig en zonder secrets.
+
+Bestandsuploads:
+- Max 2 MB.
+- Controle op MIME type én extensie.
+- Hernoem bestanden veilig op de server.
+- Sla uploads op in een veilige mapstructuur op.
+- Vermijd uitvoerbare bestandstypes.
+- Toon hoe je misbruik voorkomt.
+- Maak duidelijk welke bestandsformaten wel/niet toegelaten zijn.
+
+Database:
+- Lees connectiegegevens uit .env.local.
+- Gebruik migrations of een duidelijk schema.
+- Voorzie minstens:
+  - submissions tabel
+  - uploaded files tabel of equivalent
+  - timestamps
+  - statusvelden indien nuttig
+- Gebruik veilige database access patterns.
+- Maak geen aannames over de database zonder controle; detecteer of beschrijf hoe de app ermee omgaat.
+
+Email:
+- Gebruik SMTP-configuratie uit .env.local.
+- Verstuur minstens een basis notificatie-email bij succesvolle submit.
+- Maak mail templates eenvoudig maar proper.
+- Zorg voor foutafhandeling als SMTP tijdelijk faalt.
+
+Export:
+- Voorzie export van submissions.
+- Minstens CSV, XML.
+- Indien passend ook XLSX.
+- Denk aan filtering op datum/status indien haalbaar.
+- Exports moeten veilig zijn en geen onnodige gevoelige data lekken.
+
+Deployment:
+Geef een concreet voorstel voor:
+1. Windows + IIS
+2. Debian + Nginx
+
+Voor beide deployment-opties wil ik:
+- Architectuurvoorstel
+- Waarom deze opzet geschikt is
+- Reverse proxy setup
+- Process management
+- Omgevingsvariabelen
+- Upload folder storage
+- Logging
+- HTTPS/TLS aandachtspunten
+- Security hardening
+- Voorbeeldconfiguraties
+
+Specifiek:
+- Voor IIS: werk een voorstel uit met IIS als reverse proxy. Indien nodig met URL Rewrite en Application Request Routing.
+- Voor Debian: werk een voorstel uit met Nginx als reverse proxy voor de app.
+- Geef ook aan hoe de app als service draait (bijv. pm2, NSSM, systemd of een betere keuze afhankelijk van de stack).
+- Beschrijf kort de voor- en nadelen van IIS versus Nginx voor deze oplossing.
+
+Wat ik als output van jou verwacht:
+1. Een korte architectuursamenvatting.
+2. Een voorstel van tech stack met motivatie.
+3. Een mappenstructuur van het project.
+4. De volledige code voor frontend en backend.
+5. Een .env.example.
+6. Database schema/migrations.
+7. SMTP implementatie.
+8. Upload implementatie met 2 MB limiet.
+9. Validatie- en securitymaatregelen.
+10. Exportfunctionaliteit.
+11. Installatie-instructies voor lokaal gebruik.
+12. Deploymenthandleiding voor IIS op Windows.
+13. Deploymenthandleiding voor Nginx op Debian.
+14. Voorbeeldconfig voor IIS reverse proxy.
+15. Voorbeeldconfig voor Nginx reverse proxy.
+16. Een korte checklist voor productie-hardening.
+17. Vermeld expliciet waar je Context7 gebruikt hebt en voor welke libraries/documentatie.
+
+Belangrijke kwaliteitsregels:
+- Gebruik actuele documentatie via Context7.
+- Vermijd verouderde API’s.
+- Kies libraries die actief onderhouden worden.
+- Schrijf duidelijke comments alleen waar nodig.
+- Hou secrets uit code.
+- Als iets onzeker is door ontbrekende info uit .env.local of de screenshot, noteer de aanname expliciet.
+- Als je een framework kiest, zorg dan dat het goed werkt achter reverse proxies.
+
+Werk stapsgewijs:
+- Start met analyse van screenshot en architectuurkeuze.
+- Geef daarna het implementatieplan.
+- Lever vervolgens alle codebestanden.
+- Sluit af met deployment en hardening.
+- Maak/gebruik een claude.md bestand om je stappen te noteren zodat je later opnieuw zou kunnen beginnen.

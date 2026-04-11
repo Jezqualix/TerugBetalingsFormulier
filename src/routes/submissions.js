@@ -9,7 +9,7 @@ const { createSubmission, createUploadRecord } = require('../models/submission')
 const { sendAdminNotification, sendUserConfirmation } = require('../services/mailService');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VALID_TYPES = new Set(['onkostennota', 'dringend', 'korting', 'andere']);
+const VALID_TYPES = new Set(['onkostennota', 'dringend', 'brandstof', 'boete', 'andere']);
 
 // Ensure upload dir exists
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
@@ -29,13 +29,33 @@ router.post(
   },
   async (req, res) => {
     const { aanvraagnummer, naam_aanvrager, email_aanvrager, type_betaling,
-            naam_terugstorting, iban, omschrijving, taal } = req.body;
+            naam_terugstorting, iban, omschrijving, taal,
+            reden_urgentie, contract, klant,
+            referentie_boete, vervaldatum_boete,
+            gedetailleerde_omschrijving,
+            onkosten_items, proplanner_aangevraagd } = req.body;
 
     const errors = {};
     if (!naam_aanvrager?.trim())                                      errors.naam_aanvrager = 'Verplicht';
     if (!email_aanvrager?.trim() || !EMAIL_RE.test(email_aanvrager)) errors.email_aanvrager = 'Geldig e-mailadres vereist';
     if (!type_betaling || !VALID_TYPES.has(type_betaling))           errors.type_betaling = 'Verplicht';
     if (!naam_terugstorting?.trim())                                  errors.naam_terugstorting = 'Verplicht';
+
+    // Type-specific validation
+    if (type_betaling === 'onkostennota') {
+      try {
+        const items = JSON.parse(onkosten_items || '[]');
+        if (!Array.isArray(items) || items.length === 0) errors.onkosten_items = 'Verplicht';
+        else if (items.some(it => !it.datum || !it.omschrijving?.trim() || !it.bedrag?.toString().trim()))
+          errors.onkosten_items = 'Verplicht';
+      } catch { errors.onkosten_items = 'Verplicht'; }
+    }
+    if (type_betaling === 'dringend' && !reden_urgentie?.trim())     errors.reden_urgentie = 'Verplicht';
+    if (type_betaling === 'boete') {
+      if (!referentie_boete?.trim())                                  errors.referentie_boete = 'Verplicht';
+      if (!vervaldatum_boete)                                         errors.vervaldatum_boete = 'Verplicht';
+    }
+    if (type_betaling === 'andere' && !gedetailleerde_omschrijving?.trim()) errors.gedetailleerde_omschrijving = 'Verplicht';
 
     if (Object.keys(errors).length > 0) {
       return res.status(422).json({ errors });
@@ -52,6 +72,14 @@ router.post(
         iban: iban?.trim() || null,
         omschrijving: omschrijving?.trim() || null,
         taal: lang,
+        reden_urgentie: reden_urgentie?.trim() || null,
+        contract: contract?.trim() || null,
+        klant: klant?.trim() || null,
+        referentie_boete: referentie_boete?.trim() || null,
+        vervaldatum_boete: vervaldatum_boete || null,
+        gedetailleerde_omschrijving: gedetailleerde_omschrijving?.trim() || null,
+        onkosten_items: type_betaling === 'onkostennota' ? onkosten_items : null,
+        proplanner_aangevraagd: proplanner_aangevraagd === 'true',
       });
 
       if (req.files && req.files.length > 0) {

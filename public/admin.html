@@ -4,235 +4,148 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DockX Rental — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
   <div x-data="adminApp()" x-init="init()">
 
     <!-- Login -->
-    <div x-show="!authenticated" style="display:flex;justify-content:center;padding:60px 16px;">
-      <div class="login-card">
-        <div class="logo" style="margin-bottom:20px;">
-          <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
-          <span class="logo-rental">RENTAL</span>
-        </div>
-        <h1>Admin</h1>
-        <form @submit.prevent="login" style="margin-top:20px;">
-          <div class="form-group">
-            <label for="tokenInput">Admin token</label>
-            <input id="tokenInput" type="password" x-model="tokenInput" autocomplete="off">
+    <template x-if="!authenticated">
+      <div>
+        <header class="site-header">
+          <div class="site-header-inner">
+            <div class="logo">
+              <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
+              <span class="logo-rental">RENTAL</span>
+            </div>
           </div>
-          <span class="error-msg" x-show="loginError">Ongeldig token</span>
-          <button type="submit" class="btn-submit" :disabled="loggingIn">
-            <span x-text="loggingIn ? 'Bezig\u2026' : 'Aanmelden'"></span>
-          </button>
-        </form>
+        </header>
+        <div class="page-content login-wrapper">
+          <div class="login-card">
+            <h1 style="margin-bottom:4px;">Admin</h1>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">Aanmelden met admin token</p>
+            <form @submit.prevent="login">
+              <div class="form-group">
+                <label for="tokenInput">Admin token</label>
+                <input id="tokenInput" type="password" x-model="tokenInput" autocomplete="off">
+              </div>
+              <span class="error-msg" x-show="loginError">Ongeldig token</span>
+              <button type="submit" class="btn-cta" :disabled="loggingIn">
+                <span x-text="loggingIn ? 'Bezig\u2026' : 'Aanmelden'"></span>
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
-    </div>
+    </template>
 
     <!-- Dashboard -->
     <template x-if="authenticated">
       <div>
-        <header>
-          <div class="logo">
-            <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
-            <span class="logo-rental">RENTAL</span>
+        <header class="site-header">
+          <div class="site-header-inner">
+            <div class="logo">
+              <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
+              <span class="logo-rental">RENTAL</span>
+            </div>
+            <button class="btn-secondary" @click="logout">Afmelden</button>
           </div>
-          <button class="btn-logout" @click="logout">Afmelden</button>
         </header>
 
-        <div class="admin-container">
-          <h1>Aanvragen</h1>
+        <div class="page-content">
+          <div class="admin-card">
 
-          <!-- Filters -->
-          <div class="filters">
-            <label style="font-size:12px;font-weight:600;">Van</label>
-            <input type="date" x-model="filters.from" @change="page=1;loadSubmissions()">
-            <label style="font-size:12px;font-weight:600;">Tot</label>
-            <input type="date" x-model="filters.to" @change="page=1;loadSubmissions()">
-            <select x-model="filters.status" @change="page=1;loadSubmissions()">
-              <option value="">Alle statussen</option>
-              <option value="nieuw">Nieuw</option>
-              <option value="verwerkt">Verwerkt</option>
-            </select>
-            <button class="btn-export" @click="exportData('csv')">Export CSV</button>
-            <button class="btn-export" @click="exportData('xlsx')">Export XLSX</button>
-          </div>
+            <div class="admin-header-row">
+              <h1>Aanvragen</h1>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-primary" @click="exportData('csv')">Export CSV</button>
+                <button class="btn-primary" @click="exportData('xlsx')">Export XLSX</button>
+              </div>
+            </div>
 
-          <!-- Loading -->
-          <p x-show="loading" style="color:#888;font-size:13px;margin-bottom:12px;">Laden&hellip;</p>
+            <!-- Filters -->
+            <div class="filters-bar">
+              <label>Van</label>
+              <input type="date" x-model="filters.from" @change="page=1;loadSubmissions()">
+              <label>Tot</label>
+              <input type="date" x-model="filters.to" @change="page=1;loadSubmissions()">
+              <select x-model="filters.status" @change="page=1;loadSubmissions()">
+                <option value="">Alle statussen</option>
+                <option value="nieuw">Nieuw</option>
+                <option value="verwerkt">Verwerkt</option>
+              </select>
+            </div>
 
-          <!-- Table -->
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Datum</th>
-                  <th>Naam aanvrager</th>
-                  <th>E-mail</th>
-                  <th>Type betaling</th>
-                  <th>Naam terugstorting</th>
-                  <th>IBAN</th>
-                  <th>Omschrijving</th>
-                  <th>Status</th>
-                  <th>Taal</th>
-                  <th>Bijlagen</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="row in rows" :key="row.id">
+            <!-- Loading -->
+            <p x-show="loading" style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">Laden&hellip;</p>
+
+            <!-- Table -->
+            <div class="table-wrapper">
+              <table>
+                <thead>
                   <tr>
-                    <td x-text="row.id"></td>
-                    <td x-text="fmtDate(row.created_at)"></td>
-                    <td x-text="row.naam_aanvrager"></td>
-                    <td x-text="row.email_aanvrager"></td>
-                    <td x-text="row.type_betaling"></td>
-                    <td x-text="row.naam_terugstorting"></td>
-                    <td x-text="row.iban || '—'"></td>
-                    <td x-text="row.omschrijving ? (row.omschrijving.length > 40 ? row.omschrijving.slice(0,40)+'…' : row.omschrijving) : '—'"></td>
-                    <td x-text="row.status"></td>
-                    <td x-text="(row.taal || 'nl').toUpperCase()"></td>
-                    <td x-text="row.upload_count"></td>
+                    <th>ID</th>
+                    <th>Datum</th>
+                    <th>Naam aanvrager</th>
+                    <th>E-mail</th>
+                    <th>Type betaling</th>
+                    <th>Naam terugstorting</th>
+                    <th>IBAN</th>
+                    <th>Omschrijving</th>
+                    <th>Status</th>
+                    <th>Taal</th>
+                    <th>Bijlagen</th>
                   </tr>
-                </template>
-                <tr x-show="!loading && rows.length === 0">
-                  <td colspan="11" style="text-align:center;color:#888;padding:20px;">
-                    Geen aanvragen gevonden
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  <template x-for="row in rows" :key="row.id">
+                    <tr>
+                      <td x-text="row.id"></td>
+                      <td x-text="fmtDate(row.created_at)"></td>
+                      <td x-text="row.naam_aanvrager"></td>
+                      <td x-text="row.email_aanvrager"></td>
+                      <td x-text="row.type_betaling"></td>
+                      <td x-text="row.naam_terugstorting"></td>
+                      <td x-text="row.iban || '—'"></td>
+                      <td x-text="row.omschrijving ? (row.omschrijving.length > 40 ? row.omschrijving.slice(0,40)+'…' : row.omschrijving) : '—'"></td>
+                      <td>
+                        <span
+                          class="badge"
+                          :class="row.status === 'nieuw' ? 'badge-nieuw' : row.status === 'verwerkt' ? 'badge-verwerkt' : 'badge-default'"
+                          x-text="row.status"
+                        ></span>
+                      </td>
+                      <td x-text="(row.taal || 'nl').toUpperCase()"></td>
+                      <td x-text="row.upload_count"></td>
+                    </tr>
+                  </template>
+                  <tr x-show="!loading && rows.length === 0">
+                    <td colspan="11" style="text-align:center;color:var(--text-muted);padding:32px;">
+                      Geen aanvragen gevonden
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-          <!-- Pagination -->
-          <div class="pagination" x-show="total > pageSize">
-            <button @click="prevPage()" :disabled="page <= 1">&larr; Vorige</button>
-            <span x-text="`Pagina ${page} van ${Math.ceil(total / pageSize) || 1} (${total} resultaten)`"></span>
-            <button @click="nextPage()" :disabled="page >= Math.ceil(total / pageSize)">Volgende &rarr;</button>
-          </div>
+            <!-- Pagination -->
+            <div class="pagination" x-show="total > pageSize">
+              <button @click="prevPage()" :disabled="page <= 1">&larr; Vorige</button>
+              <span x-text="`Pagina ${page} van ${Math.ceil(total / pageSize) || 1} (${total} resultaten)`"></span>
+              <button @click="nextPage()" :disabled="page >= Math.ceil(total / pageSize)">Volgende &rarr;</button>
+            </div>
 
-        </div><!-- /.admin-container -->
+          </div><!-- /.admin-card -->
+        </div><!-- /.page-content -->
       </div>
     </template>
 
   </div><!-- /x-data -->
 
+  <script src="/assets/admin.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
-  <script>
-    function adminApp() {
-      return {
-        authenticated: false,
-        tokenInput: '',
-        token: '',
-        loginError: false,
-        loggingIn: false,
-        rows: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-        loading: false,
-        filters: { from: '', to: '', status: '' },
-
-        init() {
-          const saved = localStorage.getItem('dockx_admin_token');
-          if (saved) {
-            this.token = saved;
-            this.authenticated = true;
-            this.$nextTick(() => this.loadSubmissions());
-          }
-        },
-
-        async login() {
-          this.loginError = false;
-          this.loggingIn = true;
-          try {
-            const res = await fetch('/api/submissions?pageSize=1', {
-              headers: { 'Authorization': `Bearer ${this.tokenInput}` },
-            });
-            if (res.ok) {
-              this.token = this.tokenInput;
-              localStorage.setItem('dockx_admin_token', this.token);
-              this.authenticated = true;
-              this.tokenInput = '';
-              this.$nextTick(() => this.loadSubmissions());
-            } else {
-              this.loginError = true;
-            }
-          } catch (e) {
-            this.loginError = true;
-          } finally {
-            this.loggingIn = false;
-          }
-        },
-
-        logout() {
-          localStorage.removeItem('dockx_admin_token');
-          this.token = '';
-          this.tokenInput = '';
-          this.authenticated = false;
-          this.rows = [];
-          this.total = 0;
-        },
-
-        async loadSubmissions() {
-          this.loading = true;
-          const p = new URLSearchParams({ page: this.page, pageSize: this.pageSize });
-          if (this.filters.from)   p.set('from', this.filters.from);
-          if (this.filters.to)     p.set('to', this.filters.to);
-          if (this.filters.status) p.set('status', this.filters.status);
-
-          try {
-            const res = await fetch(`/api/submissions?${p}`, {
-              headers: { 'Authorization': `Bearer ${this.token}` },
-            });
-            if (res.status === 401) { this.logout(); return; }
-            const data = await res.json();
-            this.rows = data.rows;
-            this.total = data.total;
-          } catch (e) {
-            console.error('Load failed', e);
-          } finally {
-            this.loading = false;
-          }
-        },
-
-        prevPage() { if (this.page > 1) { this.page--; this.loadSubmissions(); } },
-        nextPage() { this.page++; this.loadSubmissions(); },
-
-        async exportData(format) {
-          const p = new URLSearchParams({ format });
-          if (this.filters.from)   p.set('from', this.filters.from);
-          if (this.filters.to)     p.set('to', this.filters.to);
-          if (this.filters.status) p.set('status', this.filters.status);
-
-          try {
-            const res = await fetch(`/api/export?${p}`, {
-              headers: { 'Authorization': `Bearer ${this.token}` },
-            });
-            if (!res.ok) { alert('Export mislukt'); return; }
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `submissions.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          } catch (e) {
-            alert('Export mislukt');
-          }
-        },
-
-        fmtDate(dt) {
-          return new Date(dt).toLocaleString('nl-BE', {
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit',
-          });
-        },
-      };
-    }
-  </script>
 </body>
 </html>

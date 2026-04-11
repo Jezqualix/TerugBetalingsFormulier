@@ -71,6 +71,7 @@ describe('POST /api/submissions', () => {
       .field('email_aanvrager', 'test@example.com')
       .field('type_betaling', 'dringend')
       .field('naam_terugstorting', 'Recipient')
+      .field('reden_urgentie', 'Urgent test reason')
       .field('taal', 'nl');
 
     expect(res.status).toBe(201);

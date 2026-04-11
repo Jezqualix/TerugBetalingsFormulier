@@ -19,13 +19,14 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
+        scriptSrc: ["'self'", "'unsafe-eval'", 'cdn.jsdelivr.net'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net', 'fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
-        fontSrc: ["'self'", 'cdn.jsdelivr.net'],
+        fontSrc: ["'self'", 'cdn.jsdelivr.net', 'fonts.gstatic.com'],
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
+        upgradeInsecureRequests: null, // disabled: app runs over HTTP behind IIS/Nginx which handles HTTPS
       },
     },
   })
