@@ -10,8 +10,8 @@ De TerugBetalingsFormulier applicatie is een Node.js Express monolith (port 3004
 
 Externe afhankelijkheden blijven ongewijzigd:
 
-- **MS SQL Server** draait op een Windows host (`vw-2025-dev-1\SQLEXPRESS`) en is bereikbaar over het netwerk. De container verbindt er als externe service mee. SQL Server zelf wordt **niet** gecontaineriseerd.
-- **SMTP relay** `81.246.69.24:2525`, plain SMTP, IP-authenticated (`ignoreTLS: true` in `src/services/mailService.js`).
+- **MS SQL Server** draait op een externe Windows host en is bereikbaar over het netwerk. Hostname/IP is volledig configureerbaar via env-vars (`DB_SERVER`, optioneel `DB_HOSTNAME`/`DB_HOST_IP` voor extra_hosts mapping). SQL Server zelf wordt **niet** gecontaineriseerd.
+- **SMTP relay**, plain SMTP, IP-authenticated (`ignoreTLS: true` in `src/services/mailService.js`). Volledig configureerbaar via `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `ADMIN_EMAIL`.
 - **Reverse proxy** (TLS-terminatie) wordt geacht op de host zelf te draaien of elders, en valt buiten de scope van deze spec.
 
 ## Requirements
@@ -38,8 +38,8 @@ Linux Docker host
               └── healthcheck: wget http://localhost:3004/health
 
 Externe afhankelijkheden (géén containers)
-  ├── MS SQL Server op Windows host vw-2025-dev-1\SQLEXPRESS
-  ├── SMTP relay 81.246.69.24:2525
+  ├── MS SQL Server (hostname/IP via DB_SERVER env-var, optioneel via extra_hosts)
+  ├── SMTP relay (host/poort via SMTP_HOST / SMTP_PORT env-vars)
   └── Reverse proxy op dezelfde host (optioneel, bv. Nginx/Traefik → 127.0.0.1:3004)
 ```
 
@@ -143,6 +143,8 @@ services:
       - "127.0.0.1:3004:3004"
     volumes:
       - /opt/terugbetalingsformulier/uploads:/app/uploads
+    extra_hosts:
+      - "${DB_HOSTNAME:-sqlserver.invalid}:${DB_HOST_IP:-127.0.0.1}"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3004/health"]
       interval: 30s
@@ -151,15 +153,30 @@ services:
       start_period: 10s
 ```
 
+Nieuwe env-vars in `.env.example` (en `.env.local`):
+
+```
+# MS SQL Server — hostname/IP zijn volledig variabel.
+# DB_SERVER is de naam waarmee de app connecteert (gebruikt door mssql driver).
+# DB_HOSTNAME + DB_HOST_IP zijn OPTIONEEL en alleen nodig als DB_SERVER een
+# naam is die de container niet via DNS kan resolven. Laat beide leeg als
+# DB_SERVER al een IP-adres is of via jullie interne DNS bekend is.
+DB_SERVER=
+DB_HOSTNAME=
+DB_HOST_IP=
+```
+
 **Aandachtspunten:**
 
 - **Port binding `127.0.0.1:3004`** — de container is alleen bereikbaar vanaf de host zelf, bedoeld voor een reverse proxy op dezelfde host die TLS-terminatie doet. Wil je de container direct op het netwerk exposeren (geen reverse proxy), wijzig dit naar `"3004:3004"`.
 - **`UPLOAD_DIR` in `.env.local`** moet `./uploads` (default) blijven of niet gezet zijn — dat pad resolved binnen de container naar `/app/uploads`, waar de bind mount op komt.
-- **`DB_SERVER` resolveren**: de Windows host heet in `.env.local` nu `vw-2025-dev-1`. Vanuit een Linux container resolvet die naam alleen als er een interne DNS is die hem kent, of als `/etc/hosts` van de host wordt geërfd (niet standaard). Twee oplossingen:
-  1. Zet `DB_SERVER` in `.env.local` op het **IP-adres** van de Windows host.
-  2. Voeg een `extra_hosts:` blok toe aan compose: `extra_hosts: ["vw-2025-dev-1:192.168.x.x"]`.
-- **`DB_TRUST_CERT=true`** blijft nodig (self-signed cert op SQLEXPRESS).
-- **SMTP** werkt out-of-the-box — de host `81.246.69.24` is een extern IP.
+- **`DB_SERVER` volledig variabel** — de SQL Server naam/IP staat nergens hardcoded. Drie scenario's die allemaal werken zonder compose file te wijzigen:
+  1. `DB_SERVER=10.20.30.40` (IP), `DB_HOSTNAME=` en `DB_HOST_IP=` leeg → container connecteert direct op IP, `extra_hosts` entry resolvet naar een placeholder die nooit wordt opgevraagd.
+  2. `DB_SERVER=sql.internal.dockx.be` (FQDN via interne DNS), `DB_HOSTNAME=` en `DB_HOST_IP=` leeg → container resolvet via DNS.
+  3. `DB_SERVER=vw-2025-dev-1`, `DB_HOSTNAME=vw-2025-dev-1`, `DB_HOST_IP=10.20.30.40` → container krijgt een `/etc/hosts` entry injected via `extra_hosts`, geen DNS nodig.
+  De `:-sqlserver.invalid` fallback zorgt dat compose niet breekt als `DB_HOSTNAME` leeg is — `.invalid` is een gereserveerd TLD (RFC 2606) dat gegarandeerd nooit resolvet en nooit per ongeluk iets raakt.
+- **`DB_TRUST_CERT=true`** blijft nodig als jullie SQL Server self-signed certificaten gebruikt.
+- **SMTP** is ook volledig via env-vars (`SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `ADMIN_EMAIL`) — die stonden al in `.env.example`, niets te wijzigen.
 
 ## Deployment workflow
 
