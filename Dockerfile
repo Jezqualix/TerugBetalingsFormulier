@@ -14,7 +14,7 @@ COPY public ./public
 COPY migrations ./migrations
 
 # Non-root: web-service, dus wél een user.
-RUN mkdir -p /app/uploads && chown -R node:node /app
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
 
 ENV NODE_ENV=production
