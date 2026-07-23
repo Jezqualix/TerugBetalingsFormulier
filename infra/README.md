@@ -62,6 +62,16 @@ Redeploy stap 5 als je `entraClientId`/`tenantId` net hebt ingevuld.
 - `curl https://$FQDN/health` → `{"status":"ok"}` (zonder login).
 - Dien een formulier in met bijlage → controleer rij in Azure SQL + file op de `uploads` share + mail via smtp2go.
 
+## Admin-dashboard toegang
+Het admin-dashboard (`/admin`) is beveiligd met een bearer-token (bovenop de Entra-login).
+Het token staat **uitsluitend** in Key Vault als secret `tbf-admin-token` — niet in git.
+Ophalen (vereist rol Key Vault Secrets User/Officer op `kv-dockx-ai`):
+```bash
+az keyvault secret show --vault-name kv-dockx-ai -n tbf-admin-token --query value -o tsv
+```
+Roteren: `az keyvault secret set --vault-name kv-dockx-ai -n tbf-admin-token --value "$(node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))")"`
+gevolgd door een nieuwe revisie (`az containerapp update -n terugbetalingsformulier -g RG_AI --revision-suffix rotN`) zodat de app het nieuwe token oppikt.
+
 ## Logs (Log Analytics, 1-3 min lag)
 ```bash
 WS=$(az containerapp env show -n cae-ai -g RG_AI \
