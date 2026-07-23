@@ -70,7 +70,7 @@ resource envStorage 'Microsoft.App/managedEnvironments/storages@2024-03-01' = {
     azureFile: {
       accountName: storage.name
       accountKey: storage.listKeys().keys[0].value
-      shareName: 'uploads'
+      shareName: uploadsShare.name
       accessMode: 'ReadWrite'
     }
   }
@@ -108,7 +108,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
     type: 'UserAssigned'
     userAssignedIdentities: { '${uai.id}': {} }
   }
-  dependsOn: [ acrPullRole, kvSecretsUserRole ]
+  dependsOn: [ acrPullRole, kvSecretsUserRole, envStorage ]
   properties: {
     managedEnvironmentId: environmentId
     configuration: {
