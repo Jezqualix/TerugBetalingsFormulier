@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
-const { requireAdminToken } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
 
-router.get('/uploads/:filename', requireAdminToken, (req, res) => {
+router.get('/uploads/:filename', requireAdmin, (req, res) => {
   const raw = req.params.filename;
   // path.basename strips any directory component — prevents traversal
   const filename = path.basename(raw);

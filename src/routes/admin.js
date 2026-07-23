@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAdminToken } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
 const { listSubmissions, getSubmissionsForExport, updateSubmissionStatus, getUploadsForSubmission } = require('../models/submission');
 const { streamCsv, streamXlsx } = require('../services/exportService');
 
@@ -11,7 +11,7 @@ function parseId(val) {
   return Number.isInteger(n) && n > 0 && String(n) === String(val) ? n : null;
 }
 
-router.get('/submissions', requireAdminToken, async (req, res) => {
+router.get('/submissions', requireAdmin, async (req, res) => {
   try {
     const { from, to, status, page, pageSize } = req.query;
     const toInt = (val, fallback) => { const n = parseInt(val, 10); return Number.isFinite(n) && n > 0 ? n : fallback; };
@@ -29,7 +29,7 @@ router.get('/submissions', requireAdminToken, async (req, res) => {
   }
 });
 
-router.patch('/submissions/:id/status', requireAdminToken, async (req, res) => {
+router.patch('/submissions/:id/status', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) {
     return res.status(400).json({ error: 'Ongeldig ID' });
@@ -50,7 +50,7 @@ router.patch('/submissions/:id/status', requireAdminToken, async (req, res) => {
   }
 });
 
-router.get('/submissions/:id/uploads', requireAdminToken, async (req, res) => {
+router.get('/submissions/:id/uploads', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) {
     return res.status(400).json({ error: 'Ongeldig ID' });
@@ -64,7 +64,7 @@ router.get('/submissions/:id/uploads', requireAdminToken, async (req, res) => {
   }
 });
 
-router.get('/export', requireAdminToken, async (req, res) => {
+router.get('/export', requireAdmin, async (req, res) => {
   try {
     const { from, to, status, format = 'csv' } = req.query;
     const rows = await getSubmissionsForExport({ from, to, status });
