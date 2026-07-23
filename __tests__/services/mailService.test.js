@@ -57,5 +57,6 @@ describe('transport configuration', () => {
       pass: process.env.SMTP_PASS,
     });
     expect(config.ignoreTLS).toBeUndefined();
+    expect(config.requireTLS).toBe(true);
   });
 });
