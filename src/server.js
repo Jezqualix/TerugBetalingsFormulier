@@ -36,6 +36,10 @@ app.use(cookieParser(process.env.COOKIE_SECRET || 'dev-cookie-secret'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Liveness probe — no DB ping, so a brief SQL hiccup does not kill the container.
+// Excluded from Easy Auth so the Container Apps health probe can reach it.
+app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
+
 // CSRF token endpoint (must come before static files so it's served as API)
 app.get('/api/csrf-token', (req, res) => {
   res.json({ token: generateToken(req, res) });
