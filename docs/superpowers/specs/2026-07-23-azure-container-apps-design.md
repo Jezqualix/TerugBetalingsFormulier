@@ -208,10 +208,10 @@ Handmatig gezet met `az keyvault secret set`. De deployer heeft de RBAC-rol **Ke
 | `DB_USER` | `TerugBetalingsFormulier_RW` |
 | `DB_ENCRYPT` | `true` |
 | `DB_TRUST_CERT` | `false` |
-| `SMTP_HOST` | `mail.smtp2go.com` (in te vullen/bevestigen) |
+| `SMTP_HOST` | `mail.smtp2go.com` (bevestigen tegen fuel_automation) |
 | `SMTP_PORT` | `2525` |
-| `SMTP_FROM` | placeholder — in te vullen bij deploy |
-| `ADMIN_EMAIL` | placeholder — in te vullen bij deploy |
+| `SMTP_FROM` | `terugbetalingsformulier@dockx.be` |
+| `ADMIN_EMAIL` | `dabi@dockx.be` |
 | `UPLOAD_DIR` | `/app/uploads` |
 
 Secrets via `secretRef`: `DB_PASSWORD`→`tbf-db-password`, `SMTP_PASS`→`tbf-smtp-pass`, `ADMIN_TOKEN`→`tbf-admin-token`, `CSRF_SECRET`→`tbf-csrf-secret`, `COOKIE_SECRET`→`tbf-cookie-secret`.
