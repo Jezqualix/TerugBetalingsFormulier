@@ -1,10 +1,6 @@
 function adminApp() {
   return {
-    authenticated: false,
-    tokenInput: '',
-    token: '',
-    loginError: false,
-    loggingIn: false,
+    denied: false,
     rows: [],
     total: 0,
     page: 1,
@@ -16,44 +12,17 @@ function adminApp() {
     uploadsLoading: false,
 
     init() {
-      const saved = localStorage.getItem('dockx_admin_token');
-      if (saved) {
-        this.token = saved;
-        this.authenticated = true;
-        this.$nextTick(() => this.loadSubmissions());
-      }
+      this.loadSubmissions();
     },
 
-    async login() {
-      this.loginError = false;
-      this.loggingIn = true;
-      try {
-        const res = await fetch('/api/submissions?pageSize=1', {
-          headers: { 'Authorization': `Bearer ${this.tokenInput}` },
-        });
-        if (res.ok) {
-          this.token = this.tokenInput;
-          localStorage.setItem('dockx_admin_token', this.token);
-          this.authenticated = true;
-          this.tokenInput = '';
-          this.$nextTick(() => this.loadSubmissions());
-        } else {
-          this.loginError = true;
-        }
-      } catch (e) {
-        this.loginError = true;
-      } finally {
-        this.loggingIn = false;
-      }
-    },
-
-    logout() {
-      localStorage.removeItem('dockx_admin_token');
-      this.token = '';
-      this.tokenInput = '';
-      this.authenticated = false;
-      this.rows = [];
-      this.total = 0;
+    // Same-origin fetch: the Easy Auth session cookie is sent automatically.
+    // 401 = Easy Auth session gone -> reload so the platform redirects to login.
+    // 403 = authenticated but not in the Admin role -> show the denied message.
+    async apiFetch(url, opts) {
+      const res = await fetch(url, opts);
+      if (res.status === 401) { location.reload(); return null; }
+      if (res.status === 403) { this.denied = true; return null; }
+      return res;
     },
 
     async loadSubmissions() {
@@ -62,12 +31,9 @@ function adminApp() {
       if (this.filters.from)   p.set('from', this.filters.from);
       if (this.filters.to)     p.set('to', this.filters.to);
       if (this.filters.status) p.set('status', this.filters.status);
-
       try {
-        const res = await fetch(`/api/submissions?${p}`, {
-          headers: { 'Authorization': `Bearer ${this.token}` },
-        });
-        if (res.status === 401) { this.logout(); return; }
+        const res = await this.apiFetch(`/api/submissions?${p}`);
+        if (!res) return;
         const data = await res.json();
         this.rows = data.rows;
         this.total = data.total;
@@ -82,21 +48,14 @@ function adminApp() {
     nextPage() { this.page++; this.loadSubmissions(); },
 
     async updateStatus(row) {
-      const newStatus = row.status;
       try {
-        const res = await fetch(`/api/submissions/${row.id}/status`, {
+        const res = await this.apiFetch(`/api/submissions/${row.id}/status`, {
           method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ status: newStatus }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: row.status }),
         });
-        if (res.status === 401) { this.logout(); return; }
-        if (!res.ok) {
-          alert('Status wijzigen mislukt');
-          this.loadSubmissions();
-        }
+        if (!res) return;
+        if (!res.ok) { alert('Status wijzigen mislukt'); this.loadSubmissions(); }
       } catch (e) {
         alert('Status wijzigen mislukt');
         this.loadSubmissions();
@@ -109,10 +68,8 @@ function adminApp() {
       this.uploads = [];
       this.uploadsLoading = true;
       try {
-        const res = await fetch(`/api/submissions/${row.id}/uploads`, {
-          headers: { 'Authorization': `Bearer ${this.token}` },
-        });
-        if (res.status === 401) { this.logout(); return; }
+        const res = await this.apiFetch(`/api/submissions/${row.id}/uploads`);
+        if (!res) { this.uploadsFor = null; return; }
         if (!res.ok) { alert('Bijlagen laden mislukt'); this.uploadsFor = null; return; }
         const data = await res.json();
         this.uploads = data.uploads;
@@ -131,10 +88,8 @@ function adminApp() {
 
     async downloadUpload(u) {
       try {
-        const res = await fetch(`/api/uploads/${encodeURIComponent(u.stored_name)}`, {
-          headers: { 'Authorization': `Bearer ${this.token}` },
-        });
-        if (res.status === 401) { this.logout(); return; }
+        const res = await this.apiFetch(`/api/uploads/${encodeURIComponent(u.stored_name)}`);
+        if (!res) return;
         if (!res.ok) { alert('Download mislukt'); return; }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
@@ -161,11 +116,9 @@ function adminApp() {
       if (this.filters.from)   p.set('from', this.filters.from);
       if (this.filters.to)     p.set('to', this.filters.to);
       if (this.filters.status) p.set('status', this.filters.status);
-
       try {
-        const res = await fetch(`/api/export?${p}`, {
-          headers: { 'Authorization': `Bearer ${this.token}` },
-        });
+        const res = await this.apiFetch(`/api/export?${p}`);
+        if (!res) return;
         if (!res.ok) { alert('Export mislukt'); return; }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);

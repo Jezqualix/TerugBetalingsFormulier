@@ -12,51 +12,24 @@
 <body>
   <div x-data="adminApp()" x-init="init()">
 
-    <!-- Login -->
-    <template x-if="!authenticated">
-      <div>
-        <header class="site-header">
-          <div class="site-header-inner">
-            <div class="logo">
-              <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
-              <span class="logo-rental">RENTAL</span>
-            </div>
-          </div>
-        </header>
-        <div class="page-content login-wrapper">
-          <div class="login-card">
-            <h1 style="margin-bottom:4px;">Admin</h1>
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">Aanmelden met admin token</p>
-            <form @submit.prevent="login">
-              <div class="form-group">
-                <label for="tokenInput">Admin token</label>
-                <input id="tokenInput" type="password" x-model="tokenInput" autocomplete="off">
-              </div>
-              <span class="error-msg" x-show="loginError">Ongeldig token</span>
-              <button type="submit" class="btn-cta" :disabled="loggingIn">
-                <span x-text="loggingIn ? 'Bezig\u2026' : 'Aanmelden'"></span>
-              </button>
-            </form>
-          </div>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <div class="logo">
+          <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
+          <span class="logo-rental">RENTAL</span>
         </div>
+        <a class="btn-secondary" href="/.auth/logout">Afmelden</a>
       </div>
-    </template>
+    </header>
 
-    <!-- Dashboard -->
-    <template x-if="authenticated">
-      <div>
-        <header class="site-header">
-          <div class="site-header-inner">
-            <div class="logo">
-              <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
-              <span class="logo-rental">RENTAL</span>
-            </div>
-            <button class="btn-secondary" @click="logout">Afmelden</button>
-          </div>
-        </header>
+    <div class="page-content">
+      <div class="admin-card" x-show="denied" x-cloak>
+        <h1>Geen toegang</h1>
+        <p style="color:var(--text-muted);">Je account heeft de Admin-rol niet. Vraag een beheerder om je de rol toe te wijzen.</p>
+      </div>
 
-        <div class="page-content">
-          <div class="admin-card">
+      <template x-if="!denied">
+      <div class="admin-card">
 
             <div class="admin-header-row">
               <h1>Aanvragen</h1>
@@ -168,10 +141,9 @@
               <button @click="nextPage()" :disabled="page >= Math.ceil(total / pageSize)">Volgende &rarr;</button>
             </div>
 
-          </div><!-- /.admin-card -->
-        </div><!-- /.page-content -->
-      </div>
-    </template>
+      </div><!-- /.admin-card -->
+      </template>
+    </div><!-- /.page-content -->
 
   </div><!-- /x-data -->
 
