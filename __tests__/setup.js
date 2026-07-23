@@ -5,5 +5,7 @@ process.env.COOKIE_SECRET = 'test-cookie-secret-32-chars-min-00';
 process.env.UPLOAD_DIR = './uploads-test';
 process.env.SMTP_HOST = 'localhost';
 process.env.SMTP_PORT = '25';
+process.env.SMTP_USER = 'test-smtp-user';
+process.env.SMTP_PASS = 'test-smtp-pass';
 process.env.SMTP_FROM = 'test@example.com';
 process.env.ADMIN_EMAIL = 'admin@example.com';
