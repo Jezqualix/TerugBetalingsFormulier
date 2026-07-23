@@ -46,3 +46,16 @@ describe('sendUserConfirmation', () => {
     );
   });
 });
+
+describe('transport configuration', () => {
+  it('configures smtp2go auth from env and does not set ignoreTLS', () => {
+    const config = nodemailer.createTransport.mock.calls[0][0];
+    expect(config.host).toBe(process.env.SMTP_HOST);
+    expect(config.port).toBe(parseInt(process.env.SMTP_PORT, 10));
+    expect(config.auth).toEqual({
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    });
+    expect(config.ignoreTLS).toBeUndefined();
+  });
+});

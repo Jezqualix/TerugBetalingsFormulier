@@ -2,10 +2,12 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '25', 10),
-  secure: false,
-  ignoreTLS: true,
-  // No auth object — server uses IP-based authentication
+  port: parseInt(process.env.SMTP_PORT || '2525', 10),
+  secure: false, // 2525/587 → STARTTLS
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
 });
 
 const templates = {
