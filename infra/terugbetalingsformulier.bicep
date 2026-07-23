@@ -194,7 +194,7 @@ resource authConfig 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
           openIdIssuer: 'https://login.microsoftonline.com/${tenantId}/v2.0'
         }
         validation: {
-          allowedAudiences: [ 'api://${entraClientId}' ]
+          allowedAudiences: [ 'api://${entraClientId}', entraClientId ]
         }
       }
     }
