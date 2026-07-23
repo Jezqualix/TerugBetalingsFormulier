@@ -29,6 +29,13 @@ app.use(
         upgradeInsecureRequests: null, // disabled: app runs over HTTP behind IIS/Nginx which handles HTTPS
       },
     },
+    // Helmet's default Referrer-Policy is 'no-referrer', which strips the Referer
+    // header. Azure Container Apps Easy Auth has a built-in anti-CSRF check that
+    // rejects state-changing requests with an empty Referer (403, "Cross-site
+    // request forgery detected ... from referer ''"). 'same-origin' sends the
+    // Referer on same-origin requests (never cross-origin), satisfying that check
+    // while the app's own csrf-csrf double-submit protection stays in force.
+    referrerPolicy: { policy: 'same-origin' },
   })
 );
 
