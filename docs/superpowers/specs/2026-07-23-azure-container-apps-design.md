@@ -63,7 +63,7 @@ Container App "terugbetalingsformulier"  (managed env cae-ai, RG_AI)
    └── resources: 0.5 CPU / 1Gi
         │                                   │
         ▼                                   ▼
-   Azure SQL dockxazsql1               smtp2go (mail.smtp2go.com:2525, auth)
+   Azure SQL dockxazsql1               smtp2go (mail-eu.smtp2go.com:2525, auth)
    database: TerugBetalingsFormulierDB
    user: TerugBetalingsFormulier_RW
 ```
@@ -188,13 +188,14 @@ Prefix `tbf-` om botsing met fuel_automation-secrets (`db-password`, `mail-pass`
 | Secret | Inhoud |
 |---|---|
 | `tbf-db-password` | wachtwoord van `TerugBetalingsFormulier_RW` |
-| `tbf-smtp-pass` | smtp2go-wachtwoord |
 | `tbf-admin-token` | admin-dashboard token |
 | `tbf-csrf-secret` | CSRF-secret (32+ bytes) |
 | `tbf-cookie-secret` | cookie-secret (32+ bytes) |
 | `tbf-entra-client-secret` | client-secret van de Entra app-registratie (voor Easy Auth) |
 
 Handmatig gezet met `az keyvault secret set`. De deployer heeft de RBAC-rol **Key Vault Secrets Officer** op de vault nodig (RG Owner alleen volstaat niet).
+
+**smtp2go-wachtwoord wordt hergebruikt:** dezelfde smtp2go-account als fuel_automation, dus het bestaande KV-secret **`mail-pass`** wordt gereferenceerd — géén nieuw `tbf-smtp-pass`.
 
 ## Env-vars (plaintext, in Bicep `env[]`)
 
@@ -208,13 +209,14 @@ Handmatig gezet met `az keyvault secret set`. De deployer heeft de RBAC-rol **Ke
 | `DB_USER` | `TerugBetalingsFormulier_RW` |
 | `DB_ENCRYPT` | `true` |
 | `DB_TRUST_CERT` | `false` |
-| `SMTP_HOST` | `mail.smtp2go.com` (bevestigen tegen fuel_automation) |
+| `SMTP_HOST` | `mail-eu.smtp2go.com` |
 | `SMTP_PORT` | `2525` |
+| `SMTP_USER` | `dockxazure` |
 | `SMTP_FROM` | `terugbetalingsformulier@dockx.be` |
 | `ADMIN_EMAIL` | `dabi@dockx.be` |
 | `UPLOAD_DIR` | `/app/uploads` |
 
-Secrets via `secretRef`: `DB_PASSWORD`→`tbf-db-password`, `SMTP_PASS`→`tbf-smtp-pass`, `ADMIN_TOKEN`→`tbf-admin-token`, `CSRF_SECRET`→`tbf-csrf-secret`, `COOKIE_SECRET`→`tbf-cookie-secret`.
+Secrets via `secretRef`: `DB_PASSWORD`→`tbf-db-password`, `SMTP_PASS`→`mail-pass` (gedeeld met fuel_automation), `ADMIN_TOKEN`→`tbf-admin-token`, `CSRF_SECRET`→`tbf-csrf-secret`, `COOKIE_SECRET`→`tbf-cookie-secret`.
 
 ## Azure Files voor uploads
 
@@ -262,8 +264,8 @@ az account set -s df516a90-771f-4cfb-835c-60248fa83f64
 #    - migrations/001,002,003 draaien via sqlcmd of Query Editor
 
 # 2. Secrets in Key Vault (deployer heeft KV Secrets Officer nodig)
+# NB: tbf-smtp-pass NIET nodig — smtp2go-wachtwoord staat al in KV als 'mail-pass' (gedeeld).
 az keyvault secret set --vault-name kv-dockx-ai -n tbf-db-password    --value '<db pw>'
-az keyvault secret set --vault-name kv-dockx-ai -n tbf-smtp-pass      --value '<smtp2go pw>'
 az keyvault secret set --vault-name kv-dockx-ai -n tbf-admin-token    --value '<admin token>'
 az keyvault secret set --vault-name kv-dockx-ai -n tbf-csrf-secret    --value '<csrf>'
 az keyvault secret set --vault-name kv-dockx-ai -n tbf-cookie-secret  --value '<cookie>'
