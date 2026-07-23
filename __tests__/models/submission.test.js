@@ -61,6 +61,48 @@ describe('createUploadRecord', () => {
   });
 });
 
+describe('updateSubmissionStatus', () => {
+  it('returns true when a row was updated', async () => {
+    const mockReq = makeMockRequest({ rowsAffected: [1] });
+    getPool.mockResolvedValue({ request: () => mockReq });
+
+    const { updateSubmissionStatus } = require('../../src/models/submission');
+    const updated = await updateSubmissionStatus(1, 'verwerkt');
+
+    expect(updated).toBe(true);
+    expect(mockReq.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns false when no row matched', async () => {
+    const mockReq = makeMockRequest({ rowsAffected: [0] });
+    getPool.mockResolvedValue({ request: () => mockReq });
+
+    const { updateSubmissionStatus } = require('../../src/models/submission');
+    const updated = await updateSubmissionStatus(999, 'verwerkt');
+
+    expect(updated).toBe(false);
+  });
+});
+
+describe('getUploadsForSubmission', () => {
+  it('returns upload rows for a submission', async () => {
+    const mockReq = makeMockRequest({
+      recordset: [
+        { id: 1, original_name: 'bon.pdf', stored_name: 'uuid1.pdf', mime_type: 'application/pdf', size_bytes: 1024 },
+        { id: 2, original_name: 'foto.jpg', stored_name: 'uuid2.jpg', mime_type: 'image/jpeg', size_bytes: 2048 },
+      ],
+    });
+    getPool.mockResolvedValue({ request: () => mockReq });
+
+    const { getUploadsForSubmission } = require('../../src/models/submission');
+    const uploads = await getUploadsForSubmission(1);
+
+    expect(uploads).toHaveLength(2);
+    expect(uploads[0].original_name).toBe('bon.pdf');
+    expect(uploads[0].stored_name).toBe('uuid1.pdf');
+  });
+});
+
 describe('listSubmissions', () => {
   it('returns rows and total', async () => {
     const countReq = makeMockRequest({ recordset: [{ total: 2 }] });

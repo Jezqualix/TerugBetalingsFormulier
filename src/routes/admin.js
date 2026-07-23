@@ -1,8 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { requireAdminToken } = require('../middleware/auth');
-const { listSubmissions, getSubmissionsForExport } = require('../models/submission');
+const { listSubmissions, getSubmissionsForExport, updateSubmissionStatus, getUploadsForSubmission } = require('../models/submission');
 const { streamCsv, streamXlsx } = require('../services/exportService');
+
+const VALID_STATUSES = new Set(['nieuw', 'verwerkt']);
+
+function parseId(val) {
+  const n = parseInt(val, 10);
+  return Number.isInteger(n) && n > 0 && String(n) === String(val) ? n : null;
+}
 
 router.get('/submissions', requireAdminToken, async (req, res) => {
   try {
@@ -18,6 +25,41 @@ router.get('/submissions', requireAdminToken, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('Admin list error:', err.message);
+    res.status(500).json({ error: 'Er is een fout opgetreden' });
+  }
+});
+
+router.patch('/submissions/:id/status', requireAdminToken, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) {
+    return res.status(400).json({ error: 'Ongeldig ID' });
+  }
+  const { status } = req.body || {};
+  if (!status || !VALID_STATUSES.has(status)) {
+    return res.status(422).json({ errors: { status: 'Ongeldige status' } });
+  }
+  try {
+    const updated = await updateSubmissionStatus(id, status);
+    if (!updated) {
+      return res.status(404).json({ error: 'Aanvraag niet gevonden' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Status update error:', err.message);
+    res.status(500).json({ error: 'Er is een fout opgetreden' });
+  }
+});
+
+router.get('/submissions/:id/uploads', requireAdminToken, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) {
+    return res.status(400).json({ error: 'Ongeldig ID' });
+  }
+  try {
+    const uploads = await getUploadsForSubmission(id);
+    res.json({ uploads });
+  } catch (err) {
+    console.error('Uploads list error:', err.message);
     res.status(500).json({ error: 'Er is een fout opgetreden' });
   }
 });

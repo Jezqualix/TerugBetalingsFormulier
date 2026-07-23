@@ -112,14 +112,26 @@
                       <td x-text="row.iban || '—'"></td>
                       <td x-text="row.omschrijving ? (row.omschrijving.length > 40 ? row.omschrijving.slice(0,40)+'…' : row.omschrijving) : '—'"></td>
                       <td>
-                        <span
-                          class="badge"
-                          :class="row.status === 'nieuw' ? 'badge-nieuw' : row.status === 'verwerkt' ? 'badge-verwerkt' : 'badge-default'"
-                          x-text="row.status"
-                        ></span>
+                        <select
+                          class="status-select"
+                          :class="row.status === 'nieuw' ? 'badge-nieuw' : 'badge-verwerkt'"
+                          x-model="row.status"
+                          @change="updateStatus(row)"
+                        >
+                          <option value="nieuw">nieuw</option>
+                          <option value="verwerkt">verwerkt</option>
+                        </select>
                       </td>
                       <td x-text="(row.taal || 'nl').toUpperCase()"></td>
-                      <td x-text="row.upload_count"></td>
+                      <td>
+                        <button
+                          x-show="row.upload_count > 0"
+                          class="btn-link"
+                          @click="showUploads(row)"
+                          x-text="`📎 ${row.upload_count}`"
+                        ></button>
+                        <span x-show="!row.upload_count">—</span>
+                      </td>
                     </tr>
                   </template>
                   <tr x-show="!loading && rows.length === 0">
@@ -129,6 +141,24 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Uploads panel -->
+            <div class="uploads-panel" x-show="uploadsFor" x-cloak>
+              <div class="uploads-panel-header">
+                <strong x-text="uploadsFor ? `Bijlagen — aanvraag #${uploadsFor.id} (${uploadsFor.naam_aanvrager})` : ''"></strong>
+                <button class="btn-secondary" @click="closeUploads()">Sluiten</button>
+              </div>
+              <p x-show="uploadsLoading" style="color:var(--text-muted);font-size:13px;">Laden&hellip;</p>
+              <ul class="uploads-list" x-show="!uploadsLoading">
+                <template x-for="u in uploads" :key="u.id">
+                  <li>
+                    <button class="btn-link" @click="downloadUpload(u)" x-text="u.original_name"></button>
+                    <span style="color:var(--text-muted);font-size:12px;" x-text="fmtSize(u.size_bytes)"></span>
+                  </li>
+                </template>
+                <li x-show="!uploadsLoading && uploads.length === 0" style="color:var(--text-muted);">Geen bijlagen gevonden</li>
+              </ul>
             </div>
 
             <!-- Pagination -->

@@ -480,6 +480,71 @@ tbody tr:last-child td { border-bottom: none; }
 .badge-verwerkt  { background: #d1fae5;           color: #065f46; }
 .badge-default   { background: #f3f4f6;           color: #374151; }
 
+/* ── Status select (inline status editing) ── */
+.status-select {
+  appearance: none;
+  width: auto;
+  padding: 3px 22px 3px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'><path d='M0 0l4 5 4-5z' fill='%23555'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.status-select:hover,
+.status-select:focus {
+  border-color: currentColor;
+  outline: none;
+}
+
+/* ── Link-style button (attachments, downloads) ── */
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--brand-700);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.btn-link:hover { color: var(--brand-800); }
+
+/* ── Uploads panel ── */
+[x-cloak] { display: none !important; }
+
+.uploads-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-card);
+  border-left: 4px solid var(--brand-600);
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+}
+.uploads-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.uploads-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.uploads-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-card);
+}
+.uploads-list li:last-child { border-bottom: none; }
+
 /* ── Pagination ── */
 .pagination {
   display: flex;

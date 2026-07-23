@@ -49,6 +49,28 @@ async function createUploadRecord(data) {
     `);
 }
 
+async function updateSubmissionStatus(id, status) {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('id',     sql.Int,          id)
+    .input('status', sql.NVarChar(50), status)
+    .query('UPDATE submissions SET status = @status WHERE id = @id');
+  return result.rowsAffected[0] > 0;
+}
+
+async function getUploadsForSubmission(submissionId) {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('submission_id', sql.Int, submissionId)
+    .query(`
+      SELECT id, original_name, stored_name, mime_type, size_bytes
+      FROM uploads
+      WHERE submission_id = @submission_id
+      ORDER BY id
+    `);
+  return result.recordset;
+}
+
 async function listSubmissions({ from, to, status, page = 1, pageSize = 20 } = {}) {
   const pool = await getPool();
 
@@ -136,4 +158,11 @@ async function getSubmissionsForExport({ from, to, status } = {}) {
   return result.recordset;
 }
 
-module.exports = { createSubmission, createUploadRecord, listSubmissions, getSubmissionsForExport };
+module.exports = {
+  createSubmission,
+  createUploadRecord,
+  updateSubmissionStatus,
+  getUploadsForSubmission,
+  listSubmissions,
+  getSubmissionsForExport,
+};
