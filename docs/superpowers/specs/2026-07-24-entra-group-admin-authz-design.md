@@ -34,7 +34,7 @@ App-rollen zijn Entra-native RBAC: de "Admin"-rol is één keer gedefinieerd; to
 | # | Onderwerp | Beslissing |
 |---|---|---|
 | 1 | Mechanisme | Entra **app-rol** `Admin` op de app-registratie; de app checkt de `roles`-claim uit `X-MS-CLIENT-PRINCIPAL` |
-| 2 | Toewijzing | Via *Enterprise App → Users and groups*: de groepen `zBoekhouding-SG` en `zIT` (of individuele gebruikers) krijgen de rol `Admin` |
+| 2 | Toewijzing | Via *Enterprise App → Users and groups*: **individuele gebruikers** krijgen de rol `Admin` (geen groep-toewijzing — die vereist Entra ID P1, niet aanwezig) |
 | 3 | Bestaand token | **Behouden als break-glass fallback** — functioneel aan de API-kant (curl/Postman/lokale dev), weg uit de UI |
 | 4 | Frontend | **Tokenloze admin-UI** — geen token-prompt/localStorage meer; leunt op de Easy Auth-sessiecookie |
 | 5 | App-toegang (sign-in) | **Assignment NIET vereist** voor sign-in — iedereen in de tenant mag inloggen en het formulier gebruiken; de rol bepaalt enkel admin |
@@ -92,9 +92,18 @@ De `roles`-claim verschijnt automatisch in het token zodra een gebruiker de rol 
 
 ## Toewijzen in de portal (of via az)
 
-*Entra ID → Enterprise applications → TerugBetalingsFormulier → Users and groups → Add user/group* → selecteer `zBoekhouding-SG` en `zIT` (of individuele gebruikers) → rol **Admin**.
+*Entra ID → Enterprise applications → TerugBetalingsFormulier → Users and groups → Add user/group* → selecteer de **individuele gebruikers** die admin moeten zijn → rol **Admin**.
 
-> **Licentie-caveat:** een **groep** aan een app-rol toewijzen vereist **Entra ID P1** (of hoger). Individuele **gebruikers** toewijzen is gratis. Als de tenant geen P1 heeft, wijs dan gebruikers rechtstreeks toe (of val terug op het groep-ID-model). Dit moet bevestigd worden vóór implementatie.
+> **Geen groep-toewijzing:** de tenant heeft geen Entra ID P1, en een groep aan een app-rol toewijzen vereist P1. Daarom wijzen we gebruikers rechtstreeks toe. Gevolg: een nieuwe admin moet apart aan de rol worden toegevoegd (niet automatisch via groep-lidmaatschap).
+
+Toewijzen kan ook via `az`:
+```bash
+# objectId van de gebruiker + van de service principal + de appRole id
+az rest --method POST \
+  --url "https://graph.microsoft.com/v1.0/servicePrincipals/<sp-objectId>/appRoleAssignedTo" \
+  --headers "Content-Type=application/json" \
+  --body '{"principalId":"<user-objectId>","resourceId":"<sp-objectId>","appRoleId":"<admin-appRole-GUID>"}'
+```
 
 Toewijzen/intrekken hierna is volledig portal-beheerd; geen app-config of revisie.
 
@@ -144,7 +153,7 @@ Unit (Jest + supertest, DB gemockt), in `__tests__/routes/admin.test.js` / `__te
 5. Malformed/niet-base64 `X-MS-CLIENT-PRINCIPAL` → geen crash, val terug op token-pad → 403 zonder token.
 6. `roles`-claim als volledige schema-URI (i.p.v. `roles`) → herkend.
 
-Handmatig na deploy: een gebruiker met de Admin-rol (via `zBoekhouding-SG`/`zIT` of direct) opent `/admin` → dashboard laadt zonder token-prompt; iemand zonder de rol krijgt de "geen toegang"-melding.
+Handmatig na deploy: een gebruiker met de Admin-rol (individueel toegewezen) opent `/admin` → dashboard laadt zonder token-prompt; iemand zonder de rol krijgt de "geen toegang"-melding.
 
 ## Buiten scope
 
@@ -154,7 +163,7 @@ Handmatig na deploy: een gebruiker met de Admin-rol (via `zBoekhouding-SG`/`zIT`
 
 ## Acceptatiecriteria
 
-1. Een gebruiker met de Entra-rol `Admin` (toegewezen via `zBoekhouding-SG`/`zIT` of direct) opent `https://terugbetalingsformulier.dockx.be/admin` na login en ziet het dashboard **zonder** token-prompt.
+1. Een gebruiker met de Entra-rol `Admin` (individueel toegewezen) opent `https://terugbetalingsformulier.dockx.be/admin` na login en ziet het dashboard **zonder** token-prompt.
 2. Een ingelogde gebruiker zonder de `Admin`-rol krijgt een duidelijke "geen toegang"-melding en geen data.
 3. `Authorization: Bearer <ADMIN_TOKEN>` blijft de adminroutes openen (break-glass), verifieerbaar met curl.
 4. De rol-check leest uitsluitend `X-MS-CLIENT-PRINCIPAL` (geen client-instelbare bron).
