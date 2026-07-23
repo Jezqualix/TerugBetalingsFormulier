@@ -33,7 +33,7 @@ Dit ontwerp **hergebruikt** dat platform; er wordt niets van opnieuw aangemaakt.
 
 | # | Onderwerp | Beslissing | Reden |
 |---|---|---|---|
-| 1 | Database | **Azure SQL** op `dockxazsql1`, nieuwe database `TerugBetalingsFormulierDB`, SQL-auth met user `TerugBetalingsFormulier_RW`, wachtwoord uit Key Vault | On-prem `vw-2025-dev-1\SQLEXPRESS` is niet bereikbaar vanuit Azure zonder VNet+VPN. `AllowAllWindowsAzureIps` staat al aan → geen netwerkwerk nodig. Matcht fuel_automation. |
+| 1 | Database | **Azure SQL** op `dockxazsql1`, nieuwe database `TerugBetalingsFormulier_DB`, SQL-auth met user `TerugBetalingsFormulier_RW`, wachtwoord uit Key Vault | On-prem `vw-2025-dev-1\SQLEXPRESS` is niet bereikbaar vanuit Azure zonder VNet+VPN. `AllowAllWindowsAzureIps` staat al aan → geen netwerkwerk nodig. Matcht fuel_automation. |
 | 2 | Uploads-persistentie | **Azure Files** share gemount op `/app/uploads` | Container Apps-filesystem is ephemeer. Azure Files overleeft restarts en is gedeeld over replicas → minimale codewijziging (multer/files-route blijven diskgebaseerd). |
 | 3 | E-mail | **smtp2go met credentials** (`SMTP_USER`/`SMTP_PASS`, wachtwoord uit KV) | Huidige relay `81.246.69.24` is IP-geauthenticeerd; Azure egress-IP is niet gewhitelist en niet stabiel. smtp2go werkt vanaf elke IP. Matcht fuel_automation. |
 | 4 | Toegangscontrole | **Entra Easy Auth** (Container Apps built-in auth) vóór de hele app, op `cae-ai` | Formulier mag niet open op publiek internet. Geen codewijziging; werkt op de bestaande consumption-env; ook voor thuiswerkers (i.t.t. VNet-only). |
@@ -64,7 +64,7 @@ Container App "terugbetalingsformulier"  (managed env cae-ai, RG_AI)
         │                                   │
         ▼                                   ▼
    Azure SQL dockxazsql1               smtp2go (mail-eu.smtp2go.com:2525, auth)
-   database: TerugBetalingsFormulierDB
+   database: TerugBetalingsFormulier_DB
    user: TerugBetalingsFormulier_RW
 ```
 
@@ -205,7 +205,7 @@ Handmatig gezet met `az keyvault secret set`. De deployer heeft de RBAC-rol **Ke
 | `PORT` | `3004` |
 | `TZ` | `Europe/Brussels` |
 | `DB_SERVER` | `dockxazsql1.database.windows.net` |
-| `DB_DATABASE` | `TerugBetalingsFormulierDB` |
+| `DB_DATABASE` | `TerugBetalingsFormulier_DB` |
 | `DB_USER` | `TerugBetalingsFormulier_RW` |
 | `DB_ENCRYPT` | `true` |
 | `DB_TRUST_CERT` | `false` |
@@ -249,7 +249,7 @@ De 3 bestaande DDL-bestanden één keer tegen Azure SQL draaien:
 - `migrations/002_type_specific_fields.sql`
 - `migrations/003_onkosten_proplanner.sql`
 
-Uitvoeren via `sqlcmd -S dockxazsql1.database.windows.net -d TerugBetalingsFormulierDB -U TerugBetalingsFormulier_RW -P <pw> -i migrations/00X_*.sql` of via de Azure Portal Query Editor. Eenmalig ook de SQL-user `TerugBetalingsFormulier_RW` aanmaken met lees/schrijfrechten op de database. Gedocumenteerd in `infra/README.md`.
+Uitvoeren via `sqlcmd -S dockxazsql1.database.windows.net -d TerugBetalingsFormulier_DB -U TerugBetalingsFormulier_RW -P <pw> -i migrations/00X_*.sql` of via de Azure Portal Query Editor. Eenmalig ook de SQL-user `TerugBetalingsFormulier_RW` aanmaken met lees/schrijfrechten op de database. Gedocumenteerd in `infra/README.md`.
 
 ## Deploy-volgorde (handmatig, `az` CLI)
 
@@ -259,7 +259,7 @@ az login
 az account set -s df516a90-771f-4cfb-835c-60248fa83f64
 
 # 1. Azure SQL: database + RW-user + migraties
-#    - create database TerugBetalingsFormulierDB op dockxazsql1
+#    - create database TerugBetalingsFormulier_DB op dockxazsql1
 #    - create user TerugBetalingsFormulier_RW (SQL-auth) + db_datareader/db_datawriter
 #    - migrations/001,002,003 draaien via sqlcmd of Query Editor
 
@@ -322,7 +322,7 @@ az containerapp update -n terugbetalingsformulier -g RG_AI \
 1. `az acr build` en `az deployment group create` slagen zonder interactieve input.
 2. De app-FQDN opent een **Entra-login**; onauthenticeerde requests worden geredirect.
 3. `GET https://<fqdn>/health` geeft `{"status":"ok"}` **zonder** login (excluded path).
-4. Na login: een formulier-submit met bijlage persisteert een rij in `TerugBetalingsFormulierDB` én de file staat op de Azure Files share `uploads`.
+4. Na login: een formulier-submit met bijlage persisteert een rij in `TerugBetalingsFormulier_DB` én de file staat op de Azure Files share `uploads`.
 5. Een container-restart / tweede replica behoudt de uploads (gedeelde Azure Files mount).
 6. Bevestigings- en admin-mail worden verstuurd via smtp2go (zichtbaar in smtp2go-activity + Log Analytics).
 7. `az containerapp show` toont de app als `Running`; `docker`-image bevat géén `.env`/secrets.

@@ -183,6 +183,6 @@ Changed from 4 types (onkostennota, dringend, korting, andere) to 5:
 
 ## Deployment (Azure Container Apps)
 Web-service op het gedeelde RG_AI-platform (cae-ai/dockxaiacr/kv-dockx-ai), achter Entra Easy Auth,
-met Azure SQL (dockxazsql1 → TerugBetalingsFormulierDB), Azure Files voor uploads en smtp2go voor mail.
+met Azure SQL (dockxazsql1 → TerugBetalingsFormulier_DB), Azure Files voor uploads en smtp2go voor mail.
 Handmatige deploy via `az acr build` + `az deployment group create`. Zie `infra/README.md` (recept) en
 `infra/HANDLEIDING.md` (NL gids). Ontwerp: `docs/superpowers/specs/2026-07-23-azure-container-apps-design.md`.

@@ -18,7 +18,7 @@
 - KV-secretnamen gebruiken prefix `tbf-`, behalve het gedeelde `mail-pass` (hergebruikt van fuel_automation).
 - Alle tests draaien met `npm test` (Jest, `--runInBand`). Bestaande suite: 55 tests groen — moet groen blijven.
 - Subscription: `df516a90-771f-4cfb-835c-60248fa83f64`; resourcegroup `RG_AI`; regio West Europe.
-- Concrete waarden: `DB_SERVER=dockxazsql1.database.windows.net`, `DB_DATABASE=TerugBetalingsFormulierDB`, `DB_USER=TerugBetalingsFormulier_RW`, `SMTP_HOST=mail-eu.smtp2go.com`, `SMTP_PORT=2525`, `SMTP_USER=dockxazure`, `SMTP_FROM=terugbetalingsformulier@dockx.be`, `ADMIN_EMAIL=dabi@dockx.be`, `UPLOAD_DIR=/app/uploads`.
+- Concrete waarden: `DB_SERVER=dockxazsql1.database.windows.net`, `DB_DATABASE=TerugBetalingsFormulier_DB`, `DB_USER=TerugBetalingsFormulier_RW`, `SMTP_HOST=mail-eu.smtp2go.com`, `SMTP_PORT=2525`, `SMTP_USER=dockxazure`, `SMTP_FROM=terugbetalingsformulier@dockx.be`, `ADMIN_EMAIL=dabi@dockx.be`, `UPLOAD_DIR=/app/uploads`.
 
 ---
 
@@ -337,7 +337,7 @@ param entraClientId string
 
 param location string = resourceGroup().location
 param dbServer string = 'dockxazsql1.database.windows.net'
-param dbDatabase string = 'TerugBetalingsFormulierDB'
+param dbDatabase string = 'TerugBetalingsFormulier_DB'
 param dbUser string = 'TerugBetalingsFormulier_RW'
 param smtpHost string = 'mail-eu.smtp2go.com'
 param smtpPort string = '2525'
@@ -585,12 +585,12 @@ az account set -s df516a90-771f-4cfb-835c-60248fa83f64
 ```
 
 ## 1. Azure SQL: database + user + migraties
-- Maak database `TerugBetalingsFormulierDB` op `dockxazsql1`.
+- Maak database `TerugBetalingsFormulier_DB` op `dockxazsql1`.
 - Maak SQL-user `TerugBetalingsFormulier_RW` met `db_datareader` + `db_datawriter`.
 - Draai de migraties:
 ```bash
 for f in migrations/001_initial.sql migrations/002_type_specific_fields.sql migrations/003_onkosten_proplanner.sql; do
-  sqlcmd -S dockxazsql1.database.windows.net -d TerugBetalingsFormulierDB \
+  sqlcmd -S dockxazsql1.database.windows.net -d TerugBetalingsFormulier_DB \
     -U TerugBetalingsFormulier_RW -P '<db pw>' -i "$f"
 done
 ```
@@ -701,7 +701,7 @@ Voeg onderaan `CLAUDE.md` toe:
 ```markdown
 ## Deployment (Azure Container Apps)
 Web-service op het gedeelde RG_AI-platform (cae-ai/dockxaiacr/kv-dockx-ai), achter Entra Easy Auth,
-met Azure SQL (dockxazsql1 → TerugBetalingsFormulierDB), Azure Files voor uploads en smtp2go voor mail.
+met Azure SQL (dockxazsql1 → TerugBetalingsFormulier_DB), Azure Files voor uploads en smtp2go voor mail.
 Handmatige deploy via `az acr build` + `az deployment group create`. Zie `infra/README.md` (recept) en
 `infra/HANDLEIDING.md` (NL gids). Ontwerp: `docs/superpowers/specs/2026-07-23-azure-container-apps-design.md`.
 ```
@@ -727,7 +727,7 @@ git commit -m "docs: Azure Container Apps deploy guide (README + HANDLEIDING)"
   - `az acr build` en `az deployment group create` slagen zonder interactieve input.
   - De FQDN opent een Entra-login; onauthenticeerde requests worden geredirect.
   - `curl https://<fqdn>/health` → `{"status":"ok"}` zonder login.
-  - Formulier-submit met bijlage → rij in `TerugBetalingsFormulierDB` én file op de Azure Files share `uploads`.
+  - Formulier-submit met bijlage → rij in `TerugBetalingsFormulier_DB` én file op de Azure Files share `uploads`.
   - Restart / 2e replica behoudt de uploads (gedeelde mount).
   - Bevestigings- + admin-mail via smtp2go (smtp2go-activity + Log Analytics).
   - `az containerapp show` toont `Running`; image bevat geen secrets.

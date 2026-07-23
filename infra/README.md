@@ -10,12 +10,12 @@ az account set -s df516a90-771f-4cfb-835c-60248fa83f64
 ```
 
 ## 1. Azure SQL: database + user + migraties
-- Maak database `TerugBetalingsFormulierDB` op `dockxazsql1`.
+- Maak database `TerugBetalingsFormulier_DB` op `dockxazsql1`.
 - Maak SQL-user `TerugBetalingsFormulier_RW` met `db_datareader` + `db_datawriter`.
 - Draai de migraties:
 ```bash
 for f in migrations/001_initial.sql migrations/002_type_specific_fields.sql migrations/003_onkosten_proplanner.sql; do
-  sqlcmd -S dockxazsql1.database.windows.net -d TerugBetalingsFormulierDB \
+  sqlcmd -S dockxazsql1.database.windows.net -d TerugBetalingsFormulier_DB \
     -U TerugBetalingsFormulier_RW -P '<db pw>' -i "$f"
 done
 ```

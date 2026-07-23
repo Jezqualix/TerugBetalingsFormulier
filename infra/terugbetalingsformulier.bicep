@@ -18,7 +18,7 @@ param entraClientId string
 
 param location string = resourceGroup().location
 param dbServer string = 'dockxazsql1.database.windows.net'
-param dbDatabase string = 'TerugBetalingsFormulierDB'
+param dbDatabase string = 'TerugBetalingsFormulier_DB'
 param dbUser string = 'TerugBetalingsFormulier_RW'
 param smtpHost string = 'mail-eu.smtp2go.com'
 param smtpPort string = '2525'
