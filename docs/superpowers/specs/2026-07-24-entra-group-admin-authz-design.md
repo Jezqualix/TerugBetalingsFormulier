@@ -1,35 +1,49 @@
-# Entra-groep-autorisatie voor admin-dashboard — design
+# Entra app-rol-autorisatie voor admin-dashboard — design
 
 **Datum:** 2026-07-24
 **Status:** Ready for user review
-**Scope:** Admin-toegang tot het dashboard (`/admin` + `/api`-adminroutes) baseren op Microsoft Entra security-groep-lidmaatschap, met het bestaande `ADMIN_TOKEN` als break-glass fallback. De app draait al volledig achter Azure Container Apps Easy Auth.
+**Scope:** Admin-toegang tot het dashboard (`/admin` + `/api`-adminroutes) baseren op een Microsoft Entra **app-rol** ("Admin") die in de portal aan gebruikers/groepen wordt toegewezen, met het bestaande `ADMIN_TOKEN` als break-glass fallback. De app draait al volledig achter Azure Container Apps Easy Auth.
+
+> Dit ontwerp vervangt een eerder groep-ID-gebaseerd idee: app-rollen laten toe dat het **volledige** toegangsbeheer (welke groepen/gebruikers admin zijn) in de Entra-portal gebeurt, zonder app-config of revisie.
 
 ## Context
 
 De app is een Express-monolith achter ACA Easy Auth (Microsoft Entra). Elke geauthenticeerde request draagt de identiteit mee via door Easy Auth geïnjecteerde headers:
 
-- `X-MS-CLIENT-PRINCIPAL` — base64-encoded JSON: `{ "auth_typ": "...", "claims": [ { "typ": "...", "val": "..." }, ... ] }`. Bevat o.a. `groups`-claims (object-ID's) als de app-registratie dat emit.
+- `X-MS-CLIENT-PRINCIPAL` — base64-encoded JSON: `{ "auth_typ": "...", "claims": [ { "typ": "...", "val": "..." }, ... ] }`. Bevat een `roles`-claim per toegewezen app-rol.
 - `X-MS-CLIENT-PRINCIPAL-NAME` — UPN van de gebruiker.
 
-Deze headers worden door Easy Auth gezet nadat de gebruiker is ingelogd; Easy Auth **strípt** client-aangeleverde varianten, dus ze zijn niet te spoofen zolang de app uitsluitend achter Easy Auth draait (wat het geval is — de container is niet los bereikbaar).
+Easy Auth zet deze headers na login en **strípt** client-aangeleverde varianten → niet spoofbaar zolang de app enkel achter Easy Auth draait (de container is niet los bereikbaar).
 
 Vandaag beschermt `src/middleware/auth.js` de adminroutes met een bearer-token (`ADMIN_TOKEN`, `crypto.timingSafeEqual`). De frontend (`public/assets/admin.js` + `admin.html`) vraagt dat token en bewaart het in `localStorage`.
+
+## Waarom app-rollen (i.p.v. groep-ID's in config)
+
+| | App-rol (gekozen) | Groep-ID's in env-var |
+|---|---|---|
+| Leden beheren | Portal (groep-lidmaatschap) | Portal |
+| Welke groepen/gebruikers admin zijn | **Portal** (Enterprise App → Users and groups) | App-config wijzigen + revisie |
+| App-config bij wijziging | Nooit | `ADMIN_GROUP_IDS` + revisie |
+| Token-config | Geen extra (roles-claim komt automatisch) | `groupMembershipClaims` nodig |
+| Overage (>200 groepen) | Niet van toepassing | Risico |
+
+App-rollen zijn Entra-native RBAC: de "Admin"-rol is één keer gedefinieerd; toewijzen/intrekken gebeurt volledig in de portal.
 
 ## Beslissingen
 
 | # | Onderwerp | Beslissing |
 |---|---|---|
-| 1 | Autorisatiemechanisme | **Entra security-groep-lidmaatschap** via de `groups`-claim uit `X-MS-CLIENT-PRINCIPAL` |
-| 2 | Toegestane groepen | **Lijst** (meerdere): `zBoekhouding-SG` (`d7cdea20-4540-4739-b31b-7ff0c6f168d7`) en `zIT` (`f0a05564-728b-47a3-bcb7-eac2de9dd0a6`). Lidmaatschap van **één** volstaat. |
-| 3 | Bestaand token | **Behouden als break-glass fallback** — blijft functioneel aan de API-kant (curl/Postman/lokale dev), maar verdwijnt uit de UI |
-| 4 | Groups-claim overage (>200 groepen) | **Buiten scope** — Graph-fallback niet nu; gedocumenteerd als toekomstige optie |
-| 5 | Frontend | **Tokenloze admin-UI** — geen token-prompt/localStorage meer; leunt op de Easy Auth-sessiecookie |
+| 1 | Mechanisme | Entra **app-rol** `Admin` op de app-registratie; de app checkt de `roles`-claim uit `X-MS-CLIENT-PRINCIPAL` |
+| 2 | Toewijzing | Via *Enterprise App → Users and groups*: de groepen `zBoekhouding-SG` en `zIT` (of individuele gebruikers) krijgen de rol `Admin` |
+| 3 | Bestaand token | **Behouden als break-glass fallback** — functioneel aan de API-kant (curl/Postman/lokale dev), weg uit de UI |
+| 4 | Frontend | **Tokenloze admin-UI** — geen token-prompt/localStorage meer; leunt op de Easy Auth-sessiecookie |
+| 5 | App-toegang (sign-in) | **Assignment NIET vereist** voor sign-in — iedereen in de tenant mag inloggen en het formulier gebruiken; de rol bepaalt enkel admin |
 
 ## Autorisatiemodel
 
-`requireAdminToken` (hernoemd/uitgebreid) laat een request door als **één** van beide klopt:
+`requireAdmin` (uitbreiding van de huidige `requireAdminToken`) laat een request door als **één** van beide klopt:
 
-1. **Entra-groep (normale weg):** decodeer `X-MS-CLIENT-PRINCIPAL`, verzamel alle `groups`-claimwaarden, en check of er een snijvlak is met de toegestane groep-ID's uit `ADMIN_GROUP_IDS`. Zo ja → toegang.
+1. **App-rol (normale weg):** decodeer `X-MS-CLIENT-PRINCIPAL`, verzamel de `roles`-claimwaarden, en check of `Admin` (of de via env geconfigureerde rolnaam) erbij zit. Zo ja → toegang.
 2. **Break-glass token:** de bestaande `Authorization: Bearer <ADMIN_TOKEN>`-check (`timingSafeEqual`) blijft ongewijzigd. Dekt noodtoegang én lokale dev (geen Easy Auth-headers).
 
 Geen match → `403` (niet 401 — de gebruiker is wél geauthenticeerd, maar niet geautoriseerd).
@@ -37,14 +51,14 @@ Geen match → `403` (niet 401 — de gebruiker is wél geauthenticeerd, maar ni
 ### Header-parsing (kern)
 
 ```js
-function groupsFromPrincipalHeader(req) {
+function rolesFromPrincipalHeader(req) {
   const raw = req.headers['x-ms-client-principal'];
   if (!raw) return [];
   try {
     const decoded = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
     const claims = Array.isArray(decoded.claims) ? decoded.claims : [];
     return claims
-      .filter((c) => c.typ === 'groups' || c.typ === 'http://schemas.microsoft.com/ws/2008/06/identity/claims/groups')
+      .filter((c) => c.typ === 'roles' || c.typ === 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role')
       .map((c) => c.val);
   } catch {
     return [];
@@ -52,79 +66,97 @@ function groupsFromPrincipalHeader(req) {
 }
 ```
 
-De `groups`-claim kan als korte typ (`groups`) of als volledige schema-URI verschijnen afhankelijk van de token-versie; beide worden herkend.
+De rol-claim kan als korte typ (`roles`) of als volledige schema-URI (`.../claims/role`) verschijnen afhankelijk van de token-versie; beide worden herkend.
 
-## App-registratie: groups-claim aanzetten
+## App-registratie: app-rol definiëren
 
-De app-registratie moet de `groups`-claim emitten, anders bevat `X-MS-CLIENT-PRINCIPAL` geen groepen. Eenmalig:
+Eenmalig een app-rol `Admin` toevoegen aan de app-registratie (clientId `c32a7ac4-b27e-4292-afc4-6f1dc052a5dd`). Via een JSON-manifest en `az`:
 
-```bash
-az ad app update --id c32a7ac4-b27e-4292-afc4-6f1dc052a5dd \
-  --set groupMembershipClaims=SecurityGroup
+```jsonc
+// app-role definitie
+{
+  "allowedMemberTypes": ["User"],   // "User" dekt ook groep-toewijzingen
+  "description": "Admins van het terugbetalingsdashboard",
+  "displayName": "Admin",
+  "id": "<nieuwe GUID>",
+  "isEnabled": true,
+  "value": "Admin"                  // dit is wat in de roles-claim komt
+}
 ```
 
-`SecurityGroup` zet alle security-groep-object-ID's van de gebruiker in het token (id- én access-token). Easy Auth geeft ze door in de principal-header.
+```bash
+az ad app update --id c32a7ac4-b27e-4292-afc4-6f1dc052a5dd --app-roles @approles.json
+```
 
-> Na deze wijziging moeten bestaande sessies opnieuw inloggen om de nieuwe claim in hun token te krijgen (of een nieuwe revisie forceren is niet nodig — het is een token-claim, geen app-config).
+De `roles`-claim verschijnt automatisch in het token zodra een gebruiker de rol heeft — **geen** `groupMembershipClaims` of andere token-config nodig.
+
+## Toewijzen in de portal (of via az)
+
+*Entra ID → Enterprise applications → TerugBetalingsFormulier → Users and groups → Add user/group* → selecteer `zBoekhouding-SG` en `zIT` (of individuele gebruikers) → rol **Admin**.
+
+> **Licentie-caveat:** een **groep** aan een app-rol toewijzen vereist **Entra ID P1** (of hoger). Individuele **gebruikers** toewijzen is gratis. Als de tenant geen P1 heeft, wijs dan gebruikers rechtstreeks toe (of val terug op het groep-ID-model). Dit moet bevestigd worden vóór implementatie.
+
+Toewijzen/intrekken hierna is volledig portal-beheerd; geen app-config of revisie.
 
 ## Codewijzigingen
 
 ### `src/middleware/auth.js`
-- Nieuwe helper `groupsFromPrincipalHeader(req)` (zie boven).
-- `requireAdminToken` uitbreiden: eerst groeps-check, dan token-check (of andersom — token eerst is goedkoper). Toegang bij één match, anders 403.
-- Toegestane groepen uit `process.env.ADMIN_GROUP_IDS` (comma-separated) → `Set`. Lege/ontbrekende env → alleen token-pad actief (veilige default).
+- Nieuwe helper `rolesFromPrincipalHeader(req)` (zie boven).
+- `requireAdmin`: eerst de goedkope token-check (bestaand), anders de rol-check; toegang bij één match, anders 403.
+- Rolnaam uit `process.env.ADMIN_ROLE` met default `'Admin'`.
+- Naam `requireAdminToken` → `requireAdmin` (export bijwerken in `src/routes/admin.js` en `src/routes/files.js`).
 
 ### `public/assets/admin.js` + `public/admin.html`
 - Token-invoerscherm, `login()`, `localStorage`-opslag en de `Authorization`-header verwijderen.
 - Adminfetches (`/api/submissions`, `/api/export`, `/api/submissions/:id/status`, `/api/submissions/:id/uploads`, `/api/uploads/:file`) sturen geen `Authorization`-header meer; de Easy Auth-sessiecookie gaat automatisch mee (same-origin).
-- **CSRF blijft**: state-changing calls (`PATCH .../status`) blijven de `x-csrf-token`-header sturen (double-submit), los van de autorisatie.
-- Op `403` → toon een nette melding: "Geen toegang — je account zit niet in een geautoriseerde groep (Boekhouding of IT)."
-- Op `401` → Easy Auth-sessie verlopen; herlaad de pagina zodat Easy Auth opnieuw redirect naar login.
+- **CSRF blijft**: `PATCH .../status` blijft de `x-csrf-token`-header sturen (double-submit), los van de autorisatie.
+- Op `403` → melding: "Geen toegang — je account heeft de Admin-rol niet."
+- Op `401` → Easy Auth-sessie verlopen; herlaad de pagina zodat Easy Auth opnieuw naar login redirect.
 
 ### `.env.example`
-- `ADMIN_GROUP_IDS=` documenteren (comma-separated Entra security-groep object-ID's).
+- `ADMIN_ROLE=Admin` documenteren (optioneel; default `Admin`).
 - `ADMIN_TOKEN` toelichten als break-glass/niet-interactief pad.
 
 ## Config / infra
 
-- Nieuwe env-var in Bicep (`infra/terugbetalingsformulier.bicep`), plaintext (geen secret):
-  `ADMIN_GROUP_IDS = d7cdea20-4540-4739-b31b-7ff0c6f168d7,f0a05564-728b-47a3-bcb7-eac2de9dd0a6`
+- Optionele env-var in Bicep (`infra/terugbetalingsformulier.bicep`), plaintext: `ADMIN_ROLE = Admin`. (Weglaten kan ook — default is `Admin`.)
+- **Geen** `ADMIN_GROUP_IDS` meer nodig.
 - `ADMIN_TOKEN` blijft een KV-secret (`tbf-admin-token`), ongewijzigd.
-- Deploy: rebuild image + nieuwe revisie (Bicep redeploy of `az containerapp update`).
+- Deploy: rebuild image + nieuwe revisie.
 
 ## Lokale dev
 
-Lokaal is er geen Easy Auth, dus geen `X-MS-CLIENT-PRINCIPAL`. De ontwikkelaar gebruikt het break-glass token-pad (bestaande flow met `Authorization: Bearer`). Alternatief: een `X-MS-CLIENT-PRINCIPAL` handmatig meesturen met een `groups`-claim voor tests. De tokenloze UI werkt lokaal niet zonder Easy Auth — dat is acceptabel (dev gebruikt token of unit tests).
+Lokaal is er geen Easy Auth, dus geen `X-MS-CLIENT-PRINCIPAL`. De ontwikkelaar gebruikt het break-glass token-pad (`Authorization: Bearer`). De tokenloze UI werkt lokaal niet zonder Easy Auth — acceptabel (dev gebruikt token of unit tests).
 
 ## Security
 
-- `X-MS-CLIENT-PRINCIPAL` wordt door Easy Auth gezet en client-aangeleverde varianten worden gestript → niet spoofbaar zolang de app enkel achter Easy Auth draait. De container is niet los van de ingress bereikbaar.
-- Break-glass token blijft `timingSafeEqual`-vergeleken; enige weg als de Entra/groep-config faalt of voor niet-interactieve toegang.
-- 403 (niet 401) bij ontbrekende groep — correcte semantiek (geauthenticeerd, niet geautoriseerd).
+- `X-MS-CLIENT-PRINCIPAL` wordt door Easy Auth gezet en client-aangeleverde varianten gestript → niet spoofbaar zolang de app enkel achter Easy Auth draait.
+- Break-glass token blijft `timingSafeEqual`-vergeleken; enige weg als de Entra-config faalt of voor niet-interactieve toegang.
+- 403 (niet 401) bij ontbrekende rol — correcte semantiek.
 
 ## Testplan
 
 Unit (Jest + supertest, DB gemockt), in `__tests__/routes/admin.test.js` / `__tests__/middleware/auth.test.js`:
 1. Geen header, geen token → 401/403 zoals nu.
 2. Geldig `ADMIN_TOKEN` bearer → 200 (break-glass blijft werken).
-3. `X-MS-CLIENT-PRINCIPAL` met een `groups`-claim die een toegestane groep-ID bevat → 200.
-4. `X-MS-CLIENT-PRINCIPAL` met alleen niet-toegestane groepen → 403.
+3. `X-MS-CLIENT-PRINCIPAL` met een `roles`-claim `Admin` → 200.
+4. `X-MS-CLIENT-PRINCIPAL` met andere rollen maar niet `Admin` → 403.
 5. Malformed/niet-base64 `X-MS-CLIENT-PRINCIPAL` → geen crash, val terug op token-pad → 403 zonder token.
-6. `groups`-claim als volledige schema-URI (i.p.v. `groups`) → herkend.
+6. `roles`-claim als volledige schema-URI (i.p.v. `roles`) → herkend.
 
-Handmatig na deploy: een `zBoekhouding-SG`- of `zIT`-lid opent `/admin` → dashboard laadt zonder token-prompt; een niet-lid krijgt de "geen toegang"-melding.
+Handmatig na deploy: een gebruiker met de Admin-rol (via `zBoekhouding-SG`/`zIT` of direct) opent `/admin` → dashboard laadt zonder token-prompt; iemand zonder de rol krijgt de "geen toegang"-melding.
 
 ## Buiten scope
 
-- Graph-fallback voor de >200-groepen overage.
-- Rol-differentiatie binnen admin (alles-of-niets blijft).
+- Meerdere admin-niveaus/rollen (alles-of-niets blijft).
 - Verwijderen van het break-glass token (blijft bestaan).
-- App-rollen i.p.v. groepen (bewust groep gekozen).
+- Groep-ID-model (bewust app-rollen gekozen).
 
 ## Acceptatiecriteria
 
-1. Een lid van `zBoekhouding-SG` of `zIT` opent `https://terugbetalingsformulier.dockx.be/admin` na Entra-login en ziet het dashboard **zonder** token-prompt.
-2. Een ingelogde gebruiker die in geen van beide groepen zit, krijgt een duidelijke "geen toegang"-melding en geen data.
+1. Een gebruiker met de Entra-rol `Admin` (toegewezen via `zBoekhouding-SG`/`zIT` of direct) opent `https://terugbetalingsformulier.dockx.be/admin` na login en ziet het dashboard **zonder** token-prompt.
+2. Een ingelogde gebruiker zonder de `Admin`-rol krijgt een duidelijke "geen toegang"-melding en geen data.
 3. `Authorization: Bearer <ADMIN_TOKEN>` blijft de adminroutes openen (break-glass), verifieerbaar met curl.
-4. De groeps-check leest uitsluitend `X-MS-CLIENT-PRINCIPAL` (geen client-instelbare bron).
-5. Alle bestaande tests blijven groen; nieuwe tests dekken de 6 scenario's hierboven.
+4. De rol-check leest uitsluitend `X-MS-CLIENT-PRINCIPAL` (geen client-instelbare bron).
+5. Toewijzen/intrekken van de rol in de portal wijzigt de toegang zonder app-config of redeploy.
+6. Alle bestaande tests blijven groen; nieuwe tests dekken de 6 scenario's hierboven.
