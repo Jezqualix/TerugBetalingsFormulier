@@ -3,7 +3,10 @@
 ## Quick Start
 1. `npm install`
 2. Copy `.env.example` to `.env.local` and fill in values
-3. Run `migrations/001_initial.sql` against your MS SQL Server instance
+3. Run all migrations in order against your MS SQL Server instance:
+   - `migrations/001_initial.sql` — base tables
+   - `migrations/002_type_specific_fields.sql` — type-specific columns
+   - `migrations/003_onkosten_proplanner.sql` — onkosten items + proplanner checkbox
 4. `npm run dev` (development) or `npm start` (production)
 5. Open http://localhost:3004
 
@@ -102,6 +105,7 @@ All 17 tasks from the implementation plan have been implemented, reviewed (spec 
 - Static files served AFTER API routes to prevent shadowing.
 - Helmet CSP: `upgradeInsecureRequests: null` — disabled because app runs over HTTP behind a reverse proxy. Without this, browsers running over HTTP would try to upgrade asset requests to HTTPS and fail.
 - Helmet CSP allows: `cdn.jsdelivr.net` (Alpine.js), `fonts.googleapis.com` + `fonts.gstatic.com` (Inter font).
+- Helmet CSP: `'unsafe-eval'` in `scriptSrc` — required because Alpine.js v3 uses `new Function()` to evaluate expressions. Without it, all `x-text`/`x-show`/`x-data` bindings silently fail.
 
 **Frontend:**
 - Alpine.js loaded from CDN (`@3`). `formApp()` in `public/assets/form.js`, `adminApp()` in `public/assets/admin.js` — kept as external files, NOT inline scripts (inline scripts are blocked by CSP `script-src 'self'`).
@@ -113,8 +117,13 @@ All 17 tasks from the implementation plan have been implemented, reviewed (spec 
 - nodemailer with no `auth` object — IP-based SMTP authentication.
 - Non-blocking: email errors are logged but do not fail the submission response.
 
-### Known deployment gotcha: CSP + HTTP
-When running behind a reverse proxy over HTTP (e.g. `http://homeweb.draco.be:3004`), Helmet's default `upgrade-insecure-requests` CSP directive causes browsers to upgrade asset requests to HTTPS, which fails on a plain HTTP backend. Fix already applied: `upgradeInsecureRequests: null` in `src/server.js`.
+### Known deployment gotchas
+
+**CSP + HTTP:** When running behind a reverse proxy over HTTP, Helmet's default `upgrade-insecure-requests` CSP directive causes browsers to upgrade asset requests to HTTPS, which fails. Fix: `upgradeInsecureRequests: null` in `src/server.js`.
+
+**CSP + Alpine.js:** Alpine.js v3 requires `'unsafe-eval'` in CSP `script-src`. Without it, Alpine loads but can't evaluate any expressions — form appears with no text and both show/hide states visible. Fix: `scriptSrc: ["'self'", "'unsafe-eval'", 'cdn.jsdelivr.net']`.
+
+**DB connection + self-signed cert:** Internal SQL Server instances (e.g. SQLEXPRESS on `vw-2025-dev-1`) use self-signed certs. Set `DB_TRUST_CERT=true` in `.env.local`, otherwise login fails with misleading "Login failed for user" error (the TLS handshake for the login packet fails, not the credentials).
 
 ---
 
@@ -134,6 +143,40 @@ public/
 Header: `background: #003012` (brand-900), `border-bottom: 3px solid #ffdd00` (accent yellow).
 Logo: "DOCK" white + "X" yellow + "RENTAL" faded uppercase.
 Primary button (submit): yellow `#ffdd00` background, dark-green bold text.
-Cards: white, `border-top: 4px solid #007c30`, 12px radius, subtle shadow.
+Cards: white, `border-top: 4px solid #007c30`, 12px radius, subtle shadow, max-width 900px.
 Table header: `background: #007c30` (brand-600), white text.
 Font: Inter from Google Fonts.
+Radio buttons: simple inline style (no card borders).
+
+---
+
+## Session 2 changes (2026-04-10/11)
+
+### Bugs fixed
+- **CSP `unsafe-eval`**: Added `'unsafe-eval'` to helmet `scriptSrc` so Alpine.js can evaluate expressions (`src/server.js`).
+- **DB login error**: `DB_TRUST_CERT=true` needed for internal SQLEXPRESS with self-signed cert.
+
+### 5 payment types with dynamic detail sections
+Changed from 4 types (onkostennota, dringend, korting, andere) to 5:
+
+| Type | Detail section fields |
+|---|---|
+| `onkostennota` | Dynamic expense items table: datum (date picker), omschrijving, bedrag. Add/remove rows. Stored as JSON in `onkosten_items` column. |
+| `dringend` | Reden van urgentie*, Contract, Klant, "Reeds aangevraagd in ProPlanner" checkbox (`proplanner_aangevraagd` BIT column). |
+| `brandstof` | Contract, Klant |
+| `boete` | Referentie Boete*, Vervaldatum Boete* (date picker) |
+| `andere` | Gedetailleerde omschrijving* |
+
+### DB migrations added
+- `migrations/002_type_specific_fields.sql` — adds `reden_urgentie`, `contract`, `klant`, `referentie_boete`, `vervaldatum_boete`, `gedetailleerde_omschrijving` columns.
+- `migrations/003_onkosten_proplanner.sql` — adds `onkosten_items` (NVARCHAR(MAX) JSON), `proplanner_aangevraagd` (BIT).
+
+### Other changes
+- **Label rename**: "Naam terugstorting" → "Naam begunstigde" / "Nom du bénéficiaire".
+- **IBAN validation**: Client-side ISO 13616 mod-97 check (optional field, validates only when filled).
+- **Form wider**: max-width 720px → 900px.
+- **Radio buttons**: removed card-style borders, now simple inline radio options.
+- **Date fields**: native `<input type="date">` with browser date picker.
+- **All i18n keys**: added for both NL and FR for all new fields.
+- **Export service**: includes all new columns.
+- **Server-side validation**: type-specific required field checks added to `src/routes/submissions.js`.

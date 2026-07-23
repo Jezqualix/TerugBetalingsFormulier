@@ -4,6 +4,7 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '25', 10),
   secure: false,
+  ignoreTLS: true,
   // No auth object — server uses IP-based authentication
 });
 
@@ -39,6 +40,7 @@ async function sendAdminNotification({ submissionId, naam_aanvrager, email_aanvr
   await transporter.sendMail({
     from: process.env.SMTP_FROM,
     to: process.env.ADMIN_EMAIL,
+    replyTo: email_aanvrager,
     subject: tmpl.subject.replace('{{id}}', submissionId),
     text: tmpl.body({ submissionId, naam_aanvrager, email_aanvrager, type_betaling }),
   });
