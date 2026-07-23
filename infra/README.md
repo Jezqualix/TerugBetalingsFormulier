@@ -72,6 +72,33 @@ az keyvault secret show --vault-name kv-dockx-ai -n tbf-admin-token --query valu
 Roteren: `az keyvault secret set --vault-name kv-dockx-ai -n tbf-admin-token --value "$(node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))")"`
 gevolgd door een nieuwe revisie (`az containerapp update -n terugbetalingsformulier -g RG_AI --revision-suffix rotN`) zodat de app het nieuwe token oppikt.
 
+## Admin-autorisatie via Entra app-rol
+Admin-toegang komt via de app-rol `Admin` op de app-registratie (clientId `c32a7ac4-b27e-4292-afc4-6f1dc052a5dd`).
+Het `ADMIN_TOKEN` (KV `tbf-admin-token`) blijft als break-glass/niet-interactieve toegang.
+
+**App-rol eenmalig definiëren:**
+```bash
+cat > approles.json <<'JSON'
+[{"allowedMemberTypes":["User"],"description":"Admins van het terugbetalingsdashboard","displayName":"Admin","id":"<NIEUWE-GUID>","isEnabled":true,"value":"Admin"}]
+JSON
+az ad app update --id c32a7ac4-b27e-4292-afc4-6f1dc052a5dd --app-roles @approles.json
+```
+(Genereer een GUID voor `id`, bv. `python -c "import uuid;print(uuid.uuid4())"`.)
+
+**Gebruikers toewijzen** (geen Entra P1 → individuele gebruikers, geen groepen):
+Portal: *Entra ID → Enterprise applications → TerugBetalingsFormulier → Users and groups → Add user → rol Admin*.
+Of via `az` (haal user- en appRole-id's op):
+```bash
+SP=01a21c66-18c2-4d33-ba81-73a1fe905973
+USER=$(az ad user show --id <upn> --query id -o tsv)
+ROLE=$(az ad sp show --id $SP --query "appRoles[?value=='Admin'].id | [0]" -o tsv)
+az rest --method POST \
+  --url "https://graph.microsoft.com/v1.0/servicePrincipals/$SP/appRoleAssignedTo" \
+  --headers "Content-Type=application/json" \
+  --body "{\"principalId\":\"$USER\",\"resourceId\":\"$SP\",\"appRoleId\":\"$ROLE\"}"
+```
+Toewijzingen wijzigen vereist geen redeploy; de gebruiker moet wel opnieuw inloggen om de nieuwe `roles`-claim te krijgen.
+
 ## Logs (Log Analytics, 1-3 min lag)
 ```bash
 WS=$(az containerapp env show -n cae-ai -g RG_AI \

@@ -156,6 +156,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'SMTP_PASS', secretRef: 'smtp-pass' }
             { name: 'SMTP_FROM', value: smtpFrom }
             { name: 'ADMIN_EMAIL', value: adminEmail }
+            { name: 'ADMIN_ROLE', value: 'Admin' }
             { name: 'ADMIN_TOKEN', secretRef: 'admin-token' }
             { name: 'CSRF_SECRET', secretRef: 'csrf-secret' }
             { name: 'COOKIE_SECRET', secretRef: 'cookie-secret' }
