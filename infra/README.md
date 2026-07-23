@@ -74,7 +74,7 @@ gevolgd door een nieuwe revisie (`az containerapp update -n terugbetalingsformul
 
 ## Admin-autorisatie via Entra app-rol
 Admin-toegang komt via de app-rol `Admin` op de app-registratie (clientId `c32a7ac4-b27e-4292-afc4-6f1dc052a5dd`).
-Het `ADMIN_TOKEN` (KV `tbf-admin-token`) blijft als break-glass/niet-interactieve toegang.
+Het `ADMIN_TOKEN` (KV `tbf-admin-token`) werkt als admin-pad **uitsluitend lokaal/in dev** (waar Easy Auth ontbreekt); in productie onderschept Easy Auth niet-geauthenticeerde requests vóór de app, dus nood-toegang gebeurt via het toewijzen van de Admin-rol in de portal.
 
 **App-rol eenmalig definiëren:**
 ```bash
