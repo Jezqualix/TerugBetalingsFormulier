@@ -98,7 +98,7 @@ body {
 }
 
 /* ── Cards ── */
-.form-card, .login-card, .success-card {
+.form-card, .success-card {
   max-width: 900px;
   margin: 0 auto;
   background: var(--bg-card);
@@ -108,7 +108,6 @@ body {
   padding: 36px 40px;
   box-shadow: var(--shadow-card);
 }
-.login-card  { max-width: 400px; }
 .success-card { text-align: center; padding: 56px 40px; }
 
 .admin-card {
@@ -403,13 +402,6 @@ textarea { resize: vertical; min-height: 90px; }
   font-size: 26px;
 }
 
-/* ── Admin login wrapper ── */
-.login-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 60px 16px;
-}
-
 /* ── Admin header row ── */
 .admin-header-row {
   display: flex;
@@ -580,7 +572,7 @@ tbody tr:last-child td { border-bottom: none; }
 /* ── Responsive ── */
 @media (max-width: 700px) {
   .form-row { flex-direction: column; }
-  .form-card, .admin-card, .login-card, .success-card { padding: 24px 20px; }
+  .form-card, .admin-card, .success-card { padding: 24px 20px; }
   .site-header-inner { padding: 0 16px; }
   .filters-bar { gap: 6px; }
   .expense-header, .expense-row {
