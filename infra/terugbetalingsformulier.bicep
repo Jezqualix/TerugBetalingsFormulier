@@ -25,6 +25,10 @@ param smtpPort string = '2525'
 param smtpUser string = 'dockxazure'
 param smtpFrom string = 'terugbetalingsformulier@dockx.be'
 param adminEmail string = 'dabi@dockx.be'
+@description('Custom domain bound to the ingress (managed TLS).')
+param customDomain string = 'terugbetalingsformulier.dockx.be'
+@description('Name of the env-level managed certificate for the custom domain.')
+param managedCertName string = 'mc-cae-ai-terugbetalingsfo-1891'
 
 var appName = 'terugbetalingsformulier'
 var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'       // AcrPull
@@ -39,6 +43,13 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
 }
 resource env 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
   name: 'cae-ai'
+}
+// Managed TLS cert for the custom domain (created out-of-band via `az containerapp
+// hostname bind`). Referenced here so Bicep deploys preserve the custom-domain
+// binding instead of stripping it from the ingress.
+resource customCert 'Microsoft.App/managedEnvironments/managedCertificates@2024-03-01' existing = {
+  parent: env
+  name: managedCertName
 }
 
 // --- Storage account + file share for uploads ---
@@ -118,6 +129,13 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 3004
         transport: 'auto'
         allowInsecure: false
+        customDomains: [
+          {
+            name: customDomain
+            bindingType: 'SniEnabled'
+            certificateId: customCert.id
+          }
+        ]
       }
       registries: [
         { server: acrLoginServer, identity: uai.id }
