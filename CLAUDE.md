@@ -10,6 +10,18 @@
 4. `npm run dev` (development) or `npm start` (production)
 5. Open http://localhost:3004
 
+## Local layout/dev mode (no DB, no auth)
+For viewing/tweaking the UI without setting up SQL Server, Entra or SMTP:
+1. `npm install`
+2. Set `DEV_MODE=true` in `.env.local` (copy from `.env.example`) — nothing else required.
+3. `npm run dev` → http://localhost:3004
+
+With `DEV_MODE=true` (and `NODE_ENV` not `production`) the model layer serves
+in-memory demo data (`src/dev/devStore.js`) and `requireAdmin` is bypassed, so
+the admin dashboard renders fully with sample rows, uploads, export and status
+toggling — all mutations reset on restart. Hard-gated: it can never activate in
+Azure, where `NODE_ENV=production`. File downloads 404 (seed files aren't on disk).
+
 ## Architecture
 Single Express process on port 3004. Serves static frontend + REST API from the same process.
 

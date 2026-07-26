@@ -1,6 +1,11 @@
 const { getPool, sql } = require('../config/db');
+const {
+  isDevMode, devList, devExport, devUploads,
+  devUpdateStatus, devCreateSubmission, devCreateUpload,
+} = require('../dev/devStore');
 
 async function createSubmission(data) {
+  if (isDevMode()) return devCreateSubmission(data);
   const pool = await getPool();
   const result = await pool.request()
     .input('aanvraagnummer',     sql.NVarChar(100),  data.aanvraagnummer || null)
@@ -36,6 +41,7 @@ async function createSubmission(data) {
 }
 
 async function createUploadRecord(data) {
+  if (isDevMode()) return devCreateUpload(data);
   const pool = await getPool();
   await pool.request()
     .input('submission_id', sql.Int,           data.submission_id)
@@ -50,6 +56,7 @@ async function createUploadRecord(data) {
 }
 
 async function updateSubmissionStatus(id, status) {
+  if (isDevMode()) return devUpdateStatus(id, status);
   const pool = await getPool();
   const result = await pool.request()
     .input('id',     sql.Int,          id)
@@ -59,6 +66,7 @@ async function updateSubmissionStatus(id, status) {
 }
 
 async function getUploadsForSubmission(submissionId) {
+  if (isDevMode()) return devUploads(submissionId);
   const pool = await getPool();
   const result = await pool.request()
     .input('submission_id', sql.Int, submissionId)
@@ -72,6 +80,7 @@ async function getUploadsForSubmission(submissionId) {
 }
 
 async function listSubmissions({ from, to, status, page = 1, pageSize = 20 } = {}) {
+  if (isDevMode()) return devList({ from, to, status, page, pageSize });
   const pool = await getPool();
 
   function buildConditions(request) {
@@ -122,6 +131,7 @@ async function listSubmissions({ from, to, status, page = 1, pageSize = 20 } = {
 }
 
 async function getSubmissionsForExport({ from, to, status } = {}) {
+  if (isDevMode()) return devExport({ from, to, status });
   const pool = await getPool();
   const request = pool.request();
   const conditions = [];
