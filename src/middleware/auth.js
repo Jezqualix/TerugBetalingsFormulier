@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { isDevMode } = require('../dev/devStore');
 
 function tokenValid(req) {
   const authHeader = req.headers['authorization'];
@@ -26,6 +27,7 @@ function rolesFromPrincipalHeader(req) {
 }
 
 function requireAdmin(req, res, next) {
+  if (isDevMode()) return next(); // local layout/dev only (NODE_ENV !== production)
   if (tokenValid(req)) return next(); // break-glass / non-interactive
   const adminRole = process.env.ADMIN_ROLE || 'Admin';
   if (rolesFromPrincipalHeader(req).includes(adminRole)) return next();

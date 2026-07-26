@@ -16,12 +16,21 @@ function adminApp() {
     },
 
     // Same-origin fetch: the Easy Auth session cookie is sent automatically.
-    // 401 = Easy Auth session gone -> reload so the platform redirects to login.
+    // 401 = Easy Auth session gone -> reload ONCE so the platform redirects to
+    //       login. Guard against an infinite reload loop when the reload does
+    //       not fix the 401 (e.g. running locally with no Easy Auth in front):
+    //       reload at most once, then show the denied message instead.
     // 403 = authenticated but not in the Admin role -> show the denied message.
     async apiFetch(url, opts) {
       const res = await fetch(url, opts);
-      if (res.status === 401) { location.reload(); return null; }
+      if (res.status === 401) {
+        if (sessionStorage.getItem('authReloaded')) { this.denied = true; return null; }
+        sessionStorage.setItem('authReloaded', '1');
+        location.reload();
+        return null;
+      }
       if (res.status === 403) { this.denied = true; return null; }
+      sessionStorage.removeItem('authReloaded'); // successful auth -> reset guard
       return res;
     },
 
