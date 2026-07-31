@@ -1,4 +1,4 @@
-const { getPool, sql } = require('../config/db');
+const { getPool, sql, qualify } = require('../config/db');
 const {
   isDevMode, devList, devExport, devUploads,
   devUpdateStatus, devCreateSubmission, devCreateUpload,
@@ -25,7 +25,7 @@ async function createSubmission(data) {
     .input('onkosten_items',             sql.NVarChar(sql.MAX), data.onkosten_items || null)
     .input('proplanner_aangevraagd',     sql.Bit,               data.proplanner_aangevraagd ? 1 : 0)
     .query(`
-      INSERT INTO submissions
+      INSERT INTO ${qualify('submissions')}
         (aanvraagnummer, naam_aanvrager, email_aanvrager, type_betaling,
          naam_terugstorting, iban, omschrijving, taal,
          reden_urgentie, contract, klant, referentie_boete, vervaldatum_boete,
@@ -50,7 +50,7 @@ async function createUploadRecord(data) {
     .input('mime_type',     sql.NVarChar(100), data.mime_type)
     .input('size_bytes',    sql.Int,           data.size_bytes)
     .query(`
-      INSERT INTO uploads (submission_id, original_name, stored_name, mime_type, size_bytes)
+      INSERT INTO ${qualify('uploads')} (submission_id, original_name, stored_name, mime_type, size_bytes)
       VALUES (@submission_id, @original_name, @stored_name, @mime_type, @size_bytes)
     `);
 }
@@ -61,7 +61,7 @@ async function updateSubmissionStatus(id, status) {
   const result = await pool.request()
     .input('id',     sql.Int,          id)
     .input('status', sql.NVarChar(50), status)
-    .query('UPDATE submissions SET status = @status WHERE id = @id');
+    .query(`UPDATE ${qualify('submissions')} SET status = @status WHERE id = @id`);
   return result.rowsAffected[0] > 0;
 }
 
@@ -72,7 +72,7 @@ async function getUploadsForSubmission(submissionId) {
     .input('submission_id', sql.Int, submissionId)
     .query(`
       SELECT id, original_name, stored_name, mime_type, size_bytes
-      FROM uploads
+      FROM ${qualify('uploads')}
       WHERE submission_id = @submission_id
       ORDER BY id
     `);
@@ -103,7 +103,7 @@ async function listSubmissions({ from, to, status, page = 1, pageSize = 20 } = {
   const countReq = pool.request();
   const where = buildConditions(countReq);
   const countResult = await countReq.query(
-    `SELECT COUNT(*) AS total FROM submissions ${where}`
+    `SELECT COUNT(*) AS total FROM ${qualify('submissions')} ${where}`
   );
 
   const dataReq = pool.request();
@@ -115,8 +115,8 @@ async function listSubmissions({ from, to, status, page = 1, pageSize = 20 } = {
   const dataResult = await dataReq.query(`
     SELECT
       s.*,
-      (SELECT COUNT(*) FROM uploads u WHERE u.submission_id = s.id) AS upload_count
-    FROM submissions s
+      (SELECT COUNT(*) FROM ${qualify('uploads')} u WHERE u.submission_id = s.id) AS upload_count
+    FROM ${qualify('submissions')} s
     ${where}
     ORDER BY s.created_at DESC
     OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
@@ -159,8 +159,8 @@ async function getSubmissionsForExport({ from, to, status } = {}) {
       s.referentie_boete, s.vervaldatum_boete, s.gedetailleerde_omschrijving,
       s.onkosten_items, s.proplanner_aangevraagd,
       s.status, s.taal, s.created_at,
-      (SELECT COUNT(*) FROM uploads u WHERE u.submission_id = s.id) AS upload_count
-    FROM submissions s
+      (SELECT COUNT(*) FROM ${qualify('uploads')} u WHERE u.submission_id = s.id) AS upload_count
+    FROM ${qualify('submissions')} s
     ${where}
     ORDER BY s.created_at DESC
   `);

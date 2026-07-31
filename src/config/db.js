@@ -17,6 +17,23 @@ const config = {
   },
 };
 
+// Every table name goes through qualify(), so one env var moves the whole app
+// between schemas: dbo on the legacy Azure SQL database, tbf on DockxDB. A
+// schema cannot be a query parameter in T-SQL, so it is validated as a plain
+// identifier before being interpolated. Rejecting rather than escaping keeps
+// the rule easy to check: no brackets, no dots, no spaces, ever.
+function schemaName() {
+  const schema = process.env.DB_SCHEMA || 'dbo';
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(schema)) {
+    throw new Error(`DB_SCHEMA '${schema}' is not a plain identifier (letters, digits, underscore)`);
+  }
+  return schema;
+}
+
+function qualify(table) {
+  return `[${schemaName()}].[${table}]`;
+}
+
 let poolPromise = null;
 
 async function getPool() {
@@ -29,4 +46,4 @@ async function getPool() {
   return poolPromise;
 }
 
-module.exports = { getPool, sql };
+module.exports = { getPool, sql, qualify, schemaName };
