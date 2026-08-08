@@ -42,6 +42,21 @@ function formApp() {
       } catch (e) {
         console.error('Could not fetch CSRF token');
       }
+      await this.prefillFromLogin();
+    },
+
+    // Pre-fill the requester fields from the Entra login (Easy Auth). Best-effort:
+    // the fields stay editable, so a failure or an empty response is not an error.
+    async prefillFromLogin() {
+      try {
+        const res = await fetch('/api/me');
+        if (!res.ok) return;
+        const me = await res.json();
+        if (me.name) this.form.naam_aanvrager = me.name;
+        if (me.email) this.form.email_aanvrager = me.email;
+      } catch (e) {
+        // No Easy Auth (local dev) or network hiccup — leave the fields empty.
+      }
     },
 
     // IBAN validation (ISO 13616)

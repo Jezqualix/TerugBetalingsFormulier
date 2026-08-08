@@ -8,3 +8,6 @@ coverage/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# OMC operational artifacts
+.omc/
