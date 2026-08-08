@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { isDevMode } = require('../dev/devStore');
+const { claimsFromPrincipalHeader } = require('./principal');
 
 function tokenValid(req) {
   const authHeader = req.headers['authorization'];
@@ -13,17 +14,9 @@ function tokenValid(req) {
 // Roles injected by Azure Container Apps Easy Auth via the (trusted, non-spoofable)
 // X-MS-CLIENT-PRINCIPAL header. Returns [] if absent or malformed.
 function rolesFromPrincipalHeader(req) {
-  const raw = req.headers['x-ms-client-principal'];
-  if (!raw) return [];
-  try {
-    const decoded = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
-    const claims = Array.isArray(decoded.claims) ? decoded.claims : [];
-    return claims
-      .filter((c) => c.typ === 'roles' || c.typ === 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role')
-      .map((c) => c.val);
-  } catch {
-    return [];
-  }
+  return claimsFromPrincipalHeader(req)
+    .filter((c) => c.typ === 'roles' || c.typ === 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role')
+    .map((c) => c.val);
 }
 
 function requireAdmin(req, res, next) {
