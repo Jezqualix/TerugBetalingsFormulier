@@ -19,11 +19,15 @@ function rolesFromPrincipalHeader(req) {
     .map((c) => c.val);
 }
 
+function hasAdminRole(req) {
+  const adminRole = process.env.ADMIN_ROLE || 'Admin';
+  return rolesFromPrincipalHeader(req).includes(adminRole);
+}
+
 function requireAdmin(req, res, next) {
   if (isDevMode()) return next(); // local layout/dev only (NODE_ENV !== production)
   if (tokenValid(req)) return next(); // break-glass / non-interactive
-  const adminRole = process.env.ADMIN_ROLE || 'Admin';
-  if (rolesFromPrincipalHeader(req).includes(adminRole)) return next();
+  if (hasAdminRole(req)) return next();
   // Authenticated via Easy Auth but missing the role → 403; otherwise unauthenticated → 401.
   if (req.headers['x-ms-client-principal']) {
     return res.status(403).json({ error: 'Forbidden' });
@@ -31,4 +35,4 @@ function requireAdmin(req, res, next) {
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
-module.exports = { requireAdmin, rolesFromPrincipalHeader };
+module.exports = { requireAdmin, rolesFromPrincipalHeader, hasAdminRole };

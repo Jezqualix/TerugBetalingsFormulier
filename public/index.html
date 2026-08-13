@@ -19,9 +19,14 @@
           <span class="logo-dock">DOCK</span><span class="logo-x">X</span>
           <span class="logo-rental">RENTAL</span>
         </div>
-        <div class="lang-switcher">
-          <button :class="{ active: lang === 'nl' }" @click="lang = 'nl'">NL</button>
-          <button :class="{ active: lang === 'fr' }" @click="lang = 'fr'">FR</button>
+        <div class="header-actions">
+          <!-- Only rendered for Admin-role users (see GET /api/me). x-cloak keeps it
+               hidden until Alpine has the answer, so it never flashes for others. -->
+          <a class="btn-secondary" x-show="isAdmin" x-cloak href="/admin" x-text="t('adminLink')"></a>
+          <div class="lang-switcher">
+            <button :class="{ active: lang === 'nl' }" @click="lang = 'nl'">NL</button>
+            <button :class="{ active: lang === 'fr' }" @click="lang = 'fr'">FR</button>
+          </div>
         </div>
       </div>
     </header>
@@ -33,6 +38,7 @@
         <div class="success-icon">&#10003;</div>
         <h2 x-text="t('successTitle')"></h2>
         <p style="color:var(--text-muted);margin-top:8px;" x-text="t('successMsg')"></p>
+        <button type="button" class="btn-secondary" style="margin-top:20px;" @click="startNew()" x-text="t('newRequest')"></button>
       </div>
 
       <!-- Form -->

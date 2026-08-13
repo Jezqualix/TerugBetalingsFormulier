@@ -6,6 +6,8 @@ const path = require('path');
 
 const { generateToken } = require('./middleware/csrf');
 const { getPrincipalOrDev } = require('./middleware/principal');
+const { hasAdminRole } = require('./middleware/auth');
+const { isDevMode } = require('./dev/devStore');
 const submissionsRouter = require('./routes/submissions');
 const adminRouter = require('./routes/admin');
 const filesRouter = require('./routes/files');
@@ -54,10 +56,15 @@ app.get('/api/csrf-token', (req, res) => {
 });
 
 // Signed-in user, for pre-filling the requester fields on the form. Easy Auth already
-// guards every route, so no extra auth check here. Responds {} when there is no
-// identity (local dev without Easy Auth) — the form then just stays empty.
+// guards every route, so no extra auth check here. Responds { isAdmin: false } when
+// there is no identity (local dev without Easy Auth) — the form then just stays empty.
+//
+// isAdmin is a UI hint only: it decides whether the form shows the link to /admin.
+// Every admin route stays behind requireAdmin, so a forged client-side value gains
+// nothing. Bearer-token admins read as false here — the browser sends no
+// Authorization header on a page load — they navigate to /admin directly.
 app.get('/api/me', (req, res) => {
-  res.json(getPrincipalOrDev(req) || {});
+  res.json({ ...(getPrincipalOrDev(req) || {}), isAdmin: isDevMode() || hasAdminRole(req) });
 });
 
 // API routes
