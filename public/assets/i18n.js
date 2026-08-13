@@ -46,6 +46,7 @@ window.i18n = {
     submitting: 'Bezig met versturen\u2026',
     successTitle: 'Aanvraag ingediend',
     successMsg: 'Uw aanvraag is succesvol ontvangen. U ontvangt een bevestiging per e-mail.',
+    newRequest: 'Nieuwe aanvraag indienen',
     errorMsg: 'Er is een fout opgetreden. Probeer het opnieuw.',
     required: 'Verplicht',
     invalidEmail: 'Geldig e-mailadres vereist',
@@ -55,6 +56,7 @@ window.i18n = {
     maxFiles: 'Maximaal 10 bestanden',
     remove: 'Verwijder',
     allowedTypes: 'Toegelaten: PDF, JPG, PNG, GIF, WEBP, DOCX, XLSX, ZIP',
+    adminLink: 'Beheer',
   },
   fr: {
     title: 'Formulaire de demande de remboursements et de petits paiements manuels',
@@ -103,6 +105,7 @@ window.i18n = {
     submitting: 'Envoi en cours\u2026',
     successTitle: 'Demande soumise',
     successMsg: 'Votre demande a bien été reçue. Vous recevrez une confirmation par e-mail.',
+    newRequest: 'Soumettre une nouvelle demande',
     errorMsg: 'Une erreur est survenue. Veuillez réessayer.',
     required: 'Obligatoire',
     invalidEmail: 'Adresse e-mail valide requise',
@@ -111,6 +114,7 @@ window.i18n = {
     fileTypeNotAllowed: 'Type de fichier non autorisé',
     maxFiles: '10 fichiers maximum',
     remove: 'Supprimer',
-    allowedTypes: 'Autorisés\u00a0: PDF, JPG, PNG, GIF, WEBP, DOCX, XLSX, ZIP',
+    adminLink: 'Administration',
+    allowedTypes:'Autorisés\u00a0: PDF, JPG, PNG, GIF, WEBP, DOCX, XLSX, ZIP',
   },
 };

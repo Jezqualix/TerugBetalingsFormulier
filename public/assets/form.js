@@ -1,22 +1,29 @@
+// Single source of truth for the field set, so startNew() clears exactly what
+// submit() sends — a field added here needs no second edit to be reset.
+function emptyForm() {
+  return {
+    aanvraagnummer: '',
+    naam_aanvrager: '',
+    email_aanvrager: '',
+    type_betaling: '',
+    naam_terugstorting: '',
+    iban: '',
+    omschrijving: '',
+    reden_urgentie: '',
+    contract: '',
+    klant: '',
+    referentie_boete: '',
+    vervaldatum_boete: '',
+    gedetailleerde_omschrijving: '',
+    proplanner_aangevraagd: false,
+  };
+}
+
 function formApp() {
   return {
     lang: 'nl',
-    form: {
-      aanvraagnummer: '',
-      naam_aanvrager: '',
-      email_aanvrager: '',
-      type_betaling: '',
-      naam_terugstorting: '',
-      iban: '',
-      omschrijving: '',
-      reden_urgentie: '',
-      contract: '',
-      klant: '',
-      referentie_boete: '',
-      vervaldatum_boete: '',
-      gedetailleerde_omschrijving: '',
-      proplanner_aangevraagd: false,
-    },
+    isAdmin: false,
+    form: emptyForm(),
     onkostenItems: [{ datum: '', omschrijving: '', bedrag: '' }],
     files: [],
     fileErrors: [],
@@ -47,6 +54,7 @@ function formApp() {
 
     // Pre-fill the requester fields from the Entra login (Easy Auth). Best-effort:
     // the fields stay editable, so a failure or an empty response is not an error.
+    // Also picks up isAdmin, which only decides whether the /admin link is shown.
     async prefillFromLogin() {
       try {
         const res = await fetch('/api/me');
@@ -54,9 +62,24 @@ function formApp() {
         const me = await res.json();
         if (me.name) this.form.naam_aanvrager = me.name;
         if (me.email) this.form.email_aanvrager = me.email;
+        this.isAdmin = !!me.isAdmin;
       } catch (e) {
         // No Easy Auth (local dev) or network hiccup — leave the fields empty.
       }
+    },
+
+    // Back to an empty form after a successful submit. The CSRF token stays valid
+    // (csrf-csrf does not rotate on use), so only the state is cleared; the requester
+    // fields get their Entra pre-fill back.
+    async startNew() {
+      this.form = emptyForm();
+      this.onkostenItems = [{ datum: '', omschrijving: '', bedrag: '' }];
+      this.files = [];
+      this.fileErrors = [];
+      this.errors = {};
+      this.submitError = false;
+      this.submitted = false;
+      await this.prefillFromLogin();
     },
 
     // IBAN validation (ISO 13616)

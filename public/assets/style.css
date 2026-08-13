@@ -67,6 +67,10 @@ body {
   padding-bottom: 2px;
 }
 
+/* ── Header actions (admin link + language switcher) ── */
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.header-actions .btn-secondary { text-decoration: none; }
+
 /* ── Language switcher ── */
 .lang-switcher { display: flex; gap: 4px; }
 .lang-switcher button {
