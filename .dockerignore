@@ -14,6 +14,9 @@ deploy
 scratchpad
 .claude
 .remember
+.omc
+.gstack
+.superpowers
 *.md
 Dockerfile
 .dockerignore
