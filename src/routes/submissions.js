@@ -11,6 +11,16 @@ const { sendAdminNotification, sendUserConfirmation } = require('../services/mai
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_TYPES = new Set(['onkostennota', 'dringend', 'brandstof', 'boete', 'andere']);
 
+// IBAN goes into the database in the ISO 13616 electronic format: no separators,
+// upper case. People paste it both grouped ("BE68 5390 0754 7034") and plain
+// ("BE68539007547034"), which stored the same account under two different strings
+// — no way to match on it, and inconsistent exports. Normalising here (not only in
+// the browser) covers every client. Note \s also matches the non-breaking space
+// that Word and Excel like to paste.
+function normalizeIban(raw) {
+  return (raw || '').replace(/\s/g, '').toUpperCase() || null;
+}
+
 // Ensure upload dir exists
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -69,7 +79,7 @@ router.post(
         email_aanvrager: email_aanvrager.trim().toLowerCase(),
         type_betaling,
         naam_terugstorting: naam_terugstorting.trim(),
-        iban: iban?.trim() || null,
+        iban: normalizeIban(iban),
         omschrijving: omschrijving?.trim() || null,
         taal: lang,
         reden_urgentie: reden_urgentie?.trim() || null,
