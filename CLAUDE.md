@@ -37,7 +37,8 @@ Browser
 ```
 
 ## Testing
-`npm test` — 44 tests, 8 suites, all passing.
+`npm test` — 115 tests, 14 suites, all passing (stand 2026-08-14).
+Handmatige/end-to-end tests staan buiten deze repo in `D:\DEVELOPMENT\tbf_tester`.
 
 ## Key Directories
 - `src/` — Backend source
@@ -193,6 +194,64 @@ Changed from 4 types (onkostennota, dringend, korting, andere) to 5:
 - **All i18n keys**: added for both NL and FR for all new fields.
 - **Export service**: includes all new columns.
 - **Server-side validation**: type-specific required field checks added to `src/routes/submissions.js`.
+
+---
+
+## Session 3 changes (2026-08-13/14) — validatie gehard na een testronde
+
+Een testronde op het gebruikersformulier (76 cases lokaal, 20 op productie) legde zes
+problemen bloot. Alles zit in `master` (`6e8ad1b`, `49d0349`, merge `f4fd946`) en is
+uitgerold als revisie `terugbetalingsformulier--fix-validatie`.
+
+| Was | Nu |
+|---|---|
+| Een veld dat twee keer in de POST zat werd een array; `.trim()` daarop gooide een TypeError in het validatieblok, dat **buiten** `try/catch` stond. Unhandled rejection in een async Express 4 handler = proces weg. Zes velden konden de dienst neerhalen met één request. | Volledige handler in `try/catch`; `first()` neemt de eerste waarde van een array. |
+| Invoer breder dan de kolom gaf een blanco 500 ("String or binary data would be truncated"). | `MAX_LENGTHS` per veld → 422 met veldnaam, plus `maxlength` in `public/index.html`. |
+| Faalde het upload-record, dan bleef de submission staan: gebruiker zag een fout, diende opnieuw in, aanvraag stond dubbel. | `createSubmissionWithUploads()` doet submission + uploads in één transactie; `discardFiles()` ruimt bijlagen op bij elke afwijzing. |
+| `new Date('2026-02-30')` rolt door, dus een verkeerde vervaldatum werd stil `2026-03-02`. | `isValidDate()` controleert formaat én round-trip. |
+| Detailvelden van een verlaten type gingen mee naar de nieuwe rij (dringend invullen, dan boete kiezen). | `TYPE_FIELDS` in de route zet alles buiten het gekozen type op null; `onTypeChange()` in `form.js` wist die velden ook in de UI. |
+| E-mail werd gevalideerd vóór het trimmen, dus een adres met trailing space uit Outlook gaf "Geldig e-mailadres vereist". | Trimmen vóór de regexcheck, server én client. |
+
+Niet-obvious punten die hierbij horen:
+
+- **`createSubmissionWithUploads` is de weg voor nieuwe inserts.** `createSubmission` en
+  `createUploadRecord` blijven bestaan (tests, dev-mode), maar wie een submission mét
+  bijlagen schrijft, hoort de transactieversie te gebruiken. Binding en SQL zitten in
+  `bindSubmission`/`bindUpload` + `submissionInsertSql()`/`uploadInsertSql()`, zodat het
+  schemaguard-testje in `__tests__/models/submission.schema.test.js` beide paden dekt.
+- **`TYPE_FIELDS` staat op twee plaatsen** (`src/routes/submissions.js` en
+  `public/assets/form.js`). De server is de autoriteit; de kopie in het formulier zorgt
+  alleen dat de gebruiker ziet wat er bewaard wordt. Nieuw type-specifiek veld = beide
+  lijsten bijwerken.
+- **`__tests__/routes/submissions.test.js` mockt de rate limiter.** De suite doet meer
+  dan tien submits vanaf hetzelfde IP; zonder die mock test je de limiter in plaats van
+  de route. De echte limiter is tegen een lopende server gecontroleerd (10× 201, 11e 429).
+- Tests: **115** in 14 suites.
+
+### Productie: rate limit is niet per gebruiker
+
+`src/server.js` zet `trust proxy 1`, dus `req.ip` komt uit `X-Forwarded-For`, en op
+Container Apps bepaalt de ingress die laatste waarde. Gevolg: een client kan zijn IP
+niet faken (handig om te weten bij testen), maar collega's achter hetzelfde publieke
+kantoor-IP delen ook dezelfde teller van 10 per 15 minuten. Wie dit wil verbeteren:
+limiteren op de Easy-Auth-identiteit in plaats van op IP (`src/middleware/rateLimiter.js`).
+
+### Nog open na deze ronde
+
+- Geen magic-byte-controle op bijlagen: een `MZ`-binary onder de naam `.png` met mimetype
+  `image/png` wordt aanvaard (`src/middleware/upload.js` kijkt naar extensie + opgegeven
+  mimetype). Bestanden zijn niet publiek bereikbaar en downloads zitten achter admin-auth.
+- Rate limit per IP (zie hierboven).
+- Testrijen `id 4` t/m `15` staan nog in productie, herkenbaar aan `TEST-` in naam
+  aanvrager en begunstigde.
+
+### Testharnas
+
+Buiten deze repo: `D:\DEVELOPMENT\tbf_tester` — API-matrix, browsertests, DB-verificatie
+en het volledige rapport (`report.md`, draaiboek in `README.md`). Handig bij elke
+wijziging aan `src/routes/submissions.js`.
+
+---
 
 ## Deployment (Azure Container Apps)
 Web-service op het gedeelde RG_AI-platform (cae-ai/dockxaiacr/kv-dockx-ai), achter Entra Easy Auth,
