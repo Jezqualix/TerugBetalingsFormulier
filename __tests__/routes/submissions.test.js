@@ -240,6 +240,69 @@ describe('POST /api/submissions', () => {
     );
   });
 
+  // The form posts its whole state, so switching type after filling a section used to
+  // store the previous section's answers on the new row.
+  it('drops detail fields that do not belong to the chosen type', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Test User')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'boete')
+      .field('naam_terugstorting', 'Recipient')
+      .field('referentie_boete', 'REF-1')
+      .field('vervaldatum_boete', '2026-12-01')
+      // leftovers from the "dringend" and "andere" sections
+      .field('reden_urgentie', 'hoort hier niet')
+      .field('contract', 'SPOOK')
+      .field('klant', 'SPOOK')
+      .field('gedetailleerde_omschrijving', 'hoort hier niet')
+      .field('onkosten_items', '[{"datum":"2026-08-01","omschrijving":"x","bedrag":"1"}]')
+      .field('proplanner_aangevraagd', 'true');
+
+    expect(res.status).toBe(201);
+    expect(createSubmissionWithUploads).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referentie_boete: 'REF-1',
+        vervaldatum_boete: '2026-12-01',
+        reden_urgentie: null,
+        contract: null,
+        klant: null,
+        gedetailleerde_omschrijving: null,
+        onkosten_items: null,
+        proplanner_aangevraagd: false,
+      }),
+      []
+    );
+  });
+
+  it('keeps the detail fields that do belong to the chosen type', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Test User')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'dringend')
+      .field('naam_terugstorting', 'Recipient')
+      .field('reden_urgentie', 'Chauffeur staat stil')
+      .field('contract', 'CTR-1')
+      .field('klant', 'Klant A')
+      .field('proplanner_aangevraagd', 'true');
+
+    expect(res.status).toBe(201);
+    expect(createSubmissionWithUploads).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reden_urgentie: 'Chauffeur staat stil',
+        contract: 'CTR-1',
+        klant: 'Klant A',
+        proplanner_aangevraagd: true,
+        referentie_boete: null,
+        gedetailleerde_omschrijving: null,
+      }),
+      []
+    );
+  });
+
   it('returns 403 without CSRF token', async () => {
     const res = await request(app)
       .post('/api/submissions')

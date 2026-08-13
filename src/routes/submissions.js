@@ -24,6 +24,19 @@ const MAX_LENGTHS = {
 };
 const MAX_FILENAME = 255; // uploads.original_name
 
+// Which detail fields belong to which payment type. The form submits its whole state,
+// so someone who fills in "dringende terugstorting", changes their mind and picks
+// "boete" used to send the urgency fields along — and they were stored on the boete
+// row, where they also turned up in the admin list and the export. Anything outside
+// this list is dropped, the way onkosten_items always was.
+const TYPE_FIELDS = {
+  onkostennota: ['onkosten_items'],
+  dringend:     ['reden_urgentie', 'contract', 'klant', 'proplanner_aangevraagd'],
+  brandstof:    ['contract', 'klant'],
+  boete:        ['referentie_boete', 'vervaldatum_boete'],
+  andere:       ['gedetailleerde_omschrijving'],
+};
+
 // A field sent twice arrives as an array (multipart allows repeats). Every string
 // method below would throw on that, and a throw here used to take the whole process
 // down: this validation runs before the DB call, and an unhandled rejection in an
@@ -152,6 +165,8 @@ router.post(
       }
 
       const lang = taal === 'fr' ? 'fr' : 'nl';
+      const belongsToType = (field) => TYPE_FIELDS[type_betaling].includes(field);
+      const forType = (field, value) => (belongsToType(field) ? value : null);
       const uploads = (req.files || []).map((file) => ({
         original_name: file.originalname,
         stored_name: file.filename,
@@ -170,14 +185,14 @@ router.post(
         iban: ibanNormalized,
         omschrijving: omschrijving?.trim() || null,
         taal: lang,
-        reden_urgentie: reden_urgentie?.trim() || null,
-        contract: contract?.trim() || null,
-        klant: klant?.trim() || null,
-        referentie_boete: referentie_boete?.trim() || null,
-        vervaldatum_boete: vervaldatum_boete || null,
-        gedetailleerde_omschrijving: gedetailleerde_omschrijving?.trim() || null,
-        onkosten_items: type_betaling === 'onkostennota' ? onkosten_items : null,
-        proplanner_aangevraagd: proplanner_aangevraagd === 'true',
+        reden_urgentie: forType('reden_urgentie', reden_urgentie?.trim() || null),
+        contract: forType('contract', contract?.trim() || null),
+        klant: forType('klant', klant?.trim() || null),
+        referentie_boete: forType('referentie_boete', referentie_boete?.trim() || null),
+        vervaldatum_boete: forType('vervaldatum_boete', vervaldatum_boete || null),
+        gedetailleerde_omschrijving: forType('gedetailleerde_omschrijving', gedetailleerde_omschrijving?.trim() || null),
+        onkosten_items: forType('onkosten_items', onkosten_items || null),
+        proplanner_aangevraagd: belongsToType('proplanner_aangevraagd') && proplanner_aangevraagd === 'true',
       }, uploads);
 
       // Non-blocking email

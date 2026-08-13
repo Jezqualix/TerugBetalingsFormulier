@@ -19,6 +19,21 @@ function emptyForm() {
   };
 }
 
+// Which detail fields belong to which payment type. Mirrors TYPE_FIELDS in
+// src/routes/submissions.js, which drops anything that does not belong to the chosen
+// type; clearing them here as well means the user sees the same thing that gets stored.
+const TYPE_FIELDS = {
+  onkostennota: [],
+  dringend:     ['reden_urgentie', 'contract', 'klant', 'proplanner_aangevraagd'],
+  brandstof:    ['contract', 'klant'],
+  boete:        ['referentie_boete', 'vervaldatum_boete'],
+  andere:       ['gedetailleerde_omschrijving'],
+};
+const DETAIL_FIELDS = [
+  'reden_urgentie', 'contract', 'klant', 'referentie_boete',
+  'vervaldatum_boete', 'gedetailleerde_omschrijving', 'proplanner_aangevraagd',
+];
+
 function formApp() {
   return {
     lang: 'nl',
@@ -103,6 +118,21 @@ function formApp() {
         remainder = (parseInt(remainder, 10) % 97).toString();
       }
       return parseInt(remainder, 10) === 1;
+    },
+
+    // Called when the user picks another payment type: everything from the section
+    // they are leaving is dropped, including its error messages and expense rows.
+    onTypeChange() {
+      const keep = TYPE_FIELDS[this.form.type_betaling] ?? [];
+      for (const field of DETAIL_FIELDS) {
+        if (keep.includes(field)) continue;
+        this.form[field] = field === 'proplanner_aangevraagd' ? false : '';
+        delete this.errors[field];
+      }
+      if (this.form.type_betaling !== 'onkostennota') {
+        this.onkostenItems = [{ datum: '', omschrijving: '', bedrag: '' }];
+        delete this.errors.onkosten_items;
+      }
     },
 
     // Onkosten items

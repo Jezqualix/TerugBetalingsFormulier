@@ -83,7 +83,7 @@
             <div class="radio-group">
               <template x-for="type in ['onkostennota', 'dringend', 'brandstof', 'boete', 'andere']" :key="type">
                 <label class="radio-label">
-                  <input type="radio" :value="type" x-model="form.type_betaling">
+                  <input type="radio" :value="type" x-model="form.type_betaling" @change="onTypeChange()">
                   <span x-text="t('types')[type]"></span>
                 </label>
               </template>
