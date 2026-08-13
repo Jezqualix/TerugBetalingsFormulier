@@ -102,7 +102,7 @@
 
           <div class="form-group" :class="{ error: errors.iban }">
             <label for="iban" x-text="t('iban')"></label>
-            <input id="iban" type="text" x-model="form.iban" placeholder="BE00 0000 0000 0000">
+            <input id="iban" type="text" x-model="form.iban" @blur="normalizeIban()" placeholder="BE00 0000 0000 0000">
             <span class="error-msg" x-show="errors.iban" x-text="t('invalidIban')"></span>
           </div>
 

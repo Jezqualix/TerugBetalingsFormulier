@@ -186,6 +186,7 @@ Changed from 4 types (onkostennota, dringend, korting, andere) to 5:
 ### Other changes
 - **Label rename**: "Naam terugstorting" → "Naam begunstigde" / "Nom du bénéficiaire".
 - **IBAN validation**: Client-side ISO 13616 mod-97 check (optional field, validates only when filled).
+- **IBAN normalisation** (2026-08-13): stored in the ISO 13616 electronic format — no separators, upper case. `normalizeIban()` in `src/routes/submissions.js` is authoritative (`\s` also catches the non-breaking space that Word/Excel paste); `normalizeIban()` in `public/assets/form.js` rewrites the field on blur so the user sees what gets stored. `migrations/005_normalize_iban.sql` cleans up rows written before this (grouped and plain IBANs both existed).
 - **Form wider**: max-width 720px → 900px.
 - **Radio buttons**: removed card-style borders, now simple inline radio options.
 - **Date fields**: native `<input type="date">` with browser date picker.

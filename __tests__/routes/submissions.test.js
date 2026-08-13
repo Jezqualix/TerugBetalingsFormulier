@@ -79,6 +79,39 @@ describe('POST /api/submissions', () => {
     expect(createSubmission).toHaveBeenCalledTimes(1);
   });
 
+  it('stores the IBAN without separators and upper case', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Test User')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'brandstof')
+      .field('naam_terugstorting', 'Recipient')
+      // grouped, non-breaking space in the middle, lower case — all three get fixed
+      .field('iban', ' be68 5390 0754 7034 ');
+
+    expect(res.status).toBe(201);
+    expect(createSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({ iban: 'BE68539007547034' })
+    );
+  });
+
+  it('stores a blank IBAN as null', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Test User')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'brandstof')
+      .field('naam_terugstorting', 'Recipient')
+      .field('iban', '   ');
+
+    expect(res.status).toBe(201);
+    expect(createSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({ iban: null })
+    );
+  });
+
   it('returns 403 without CSRF token', async () => {
     const res = await request(app)
       .post('/api/submissions')

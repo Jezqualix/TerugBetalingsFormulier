@@ -82,6 +82,13 @@ function formApp() {
       await this.prefillFromLogin();
     },
 
+    // Rewrite the field to the ISO 13616 electronic format (no spaces, upper case)
+    // — the shape it is stored in. The server normalises as well; doing it here too
+    // keeps what the user sees identical to what lands in the database.
+    normalizeIban() {
+      this.form.iban = this.form.iban.replace(/\s/g, '').toUpperCase();
+    },
+
     // IBAN validation (ISO 13616)
     validateIban(iban) {
       if (!iban) return true; // optional field
@@ -179,6 +186,7 @@ function formApp() {
 
     async submit() {
       if (!this.validate()) return;
+      this.normalizeIban();
       this.submitting = true;
       this.submitError = false;
 
