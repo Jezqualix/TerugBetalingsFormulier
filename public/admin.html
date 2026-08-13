@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
-<body>
+<body class="admin-page">
   <div x-data="adminApp()" x-init="init()">
 
     <header class="site-header">
@@ -36,9 +36,22 @@
             <div class="admin-header-row">
               <h1>Aanvragen</h1>
               <div style="display:flex;gap:8px;">
+                <button class="btn-secondary" @click="colPickerOpen = !colPickerOpen">Kolommen</button>
                 <button class="btn-primary" @click="exportData('csv')">Export CSV</button>
                 <button class="btn-primary" @click="exportData('xlsx')">Export XLSX</button>
               </div>
+            </div>
+
+            <!-- Column picker. Hides columns from the view only; the export keeps
+                 every field, so switching one off never loses data. -->
+            <div class="col-picker" x-show="colPickerOpen" x-cloak>
+              <template x-for="c in columns" :key="c.key">
+                <label class="col-picker-item">
+                  <input type="checkbox" :checked="cols[c.key]" @change="toggleCol(c.key)">
+                  <span x-text="c.label"></span>
+                </label>
+              </template>
+              <button class="btn-link" @click="resetCols()">Standaard</button>
             </div>
 
             <!-- Filters -->
@@ -62,31 +75,35 @@
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Datum</th>
-                    <th>Naam aanvrager</th>
-                    <th>E-mail</th>
-                    <th>Type betaling</th>
-                    <th>Naam terugstorting</th>
-                    <th>IBAN</th>
-                    <th>Omschrijving</th>
-                    <th>Status</th>
-                    <th>Taal</th>
-                    <th>Bijlagen</th>
+                    <th x-show="cols.id">ID</th>
+                    <th x-show="cols.created_at">Datum</th>
+                    <th x-show="cols.naam_aanvrager">Naam aanvrager</th>
+                    <th x-show="cols.email_aanvrager">E-mail</th>
+                    <th x-show="cols.type_betaling">Type betaling</th>
+                    <th x-show="cols.naam_terugstorting">Naam begunstigde</th>
+                    <th x-show="cols.iban">IBAN</th>
+                    <th x-show="cols.omschrijving">Omschrijving</th>
+                    <th x-show="cols.status">Status</th>
+                    <th x-show="cols.taal">Taal</th>
+                    <th x-show="cols.uploads">Bijlagen</th>
                   </tr>
                 </thead>
                 <tbody>
                   <template x-for="row in rows" :key="row.id">
                     <tr>
-                      <td x-text="row.id"></td>
-                      <td x-text="fmtDate(row.created_at)"></td>
-                      <td x-text="row.naam_aanvrager"></td>
-                      <td x-text="row.email_aanvrager"></td>
-                      <td x-text="row.type_betaling"></td>
-                      <td x-text="row.naam_terugstorting"></td>
-                      <td x-text="row.iban || '—'"></td>
-                      <td x-text="row.omschrijving ? (row.omschrijving.length > 40 ? row.omschrijving.slice(0,40)+'…' : row.omschrijving) : '—'"></td>
-                      <td>
+                      <td x-show="cols.id" x-text="row.id"></td>
+                      <!-- Date only in the cell, full timestamp on hover -->
+                      <td x-show="cols.created_at" :title="fmtDateTime(row.created_at)" x-text="fmtDate(row.created_at)"></td>
+                      <td x-show="cols.naam_aanvrager" x-text="row.naam_aanvrager"></td>
+                      <td x-show="cols.email_aanvrager" x-text="row.email_aanvrager"></td>
+                      <td x-show="cols.type_betaling" x-text="row.type_betaling"></td>
+                      <td x-show="cols.naam_terugstorting" x-text="row.naam_terugstorting"></td>
+                      <td x-show="cols.iban" x-text="row.iban || '—'"></td>
+                      <!-- Truncation is CSS (max-width + ellipsis), not a JS slice: it adapts to
+                           the column width instead of cutting at a fixed 40 characters, and the
+                           full text stays in the title. -->
+                      <td class="col-omschrijving" x-show="cols.omschrijving" :title="row.omschrijving || ''" x-text="row.omschrijving || '—'"></td>
+                      <td x-show="cols.status">
                         <select
                           class="status-select"
                           :class="row.status === 'nieuw' ? 'badge-nieuw' : 'badge-verwerkt'"
@@ -97,8 +114,8 @@
                           <option value="verwerkt">verwerkt</option>
                         </select>
                       </td>
-                      <td x-text="(row.taal || 'nl').toUpperCase()"></td>
-                      <td>
+                      <td x-show="cols.taal" x-text="(row.taal || 'nl').toUpperCase()"></td>
+                      <td x-show="cols.uploads">
                         <button
                           x-show="row.upload_count > 0"
                           class="btn-link"
@@ -110,7 +127,7 @@
                     </tr>
                   </template>
                   <tr x-show="!loading && rows.length === 0">
-                    <td colspan="11" style="text-align:center;color:var(--text-muted);padding:32px;">
+                    <td :colspan="visibleColCount" style="text-align:center;color:var(--text-muted);padding:32px;">
                       Geen aanvragen gevonden
                     </td>
                   </tr>

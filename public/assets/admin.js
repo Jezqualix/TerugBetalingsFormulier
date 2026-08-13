@@ -1,6 +1,51 @@
+// The table has eleven columns and every cell is nowrap, so on anything narrower
+// than a wide desktop it scrolled sideways. Columns can now be switched off; the
+// choice is per browser (localStorage), not per user account, which keeps it a
+// pure view preference with no API or migration behind it.
+const ADMIN_COLUMNS = [
+  { key: 'id',                 label: 'ID' },
+  { key: 'created_at',         label: 'Datum' },
+  { key: 'naam_aanvrager',     label: 'Naam aanvrager' },
+  { key: 'email_aanvrager',    label: 'E-mail' },
+  { key: 'type_betaling',      label: 'Type betaling' },
+  { key: 'naam_terugstorting', label: 'Naam begunstigde' },
+  { key: 'iban',               label: 'IBAN' },
+  { key: 'omschrijving',       label: 'Omschrijving' },
+  { key: 'status',             label: 'Status' },
+  { key: 'taal',               label: 'Taal' },
+  { key: 'uploads',            label: 'Bijlagen' },
+];
+// Off on first visit: e-mail follows from the name, and language is rarely acted on.
+const HIDDEN_BY_DEFAULT = ['email_aanvrager', 'taal'];
+const COLS_KEY = 'tbf.adminColumns';
+
+function defaultCols() {
+  const cols = {};
+  for (const c of ADMIN_COLUMNS) cols[c.key] = !HIDDEN_BY_DEFAULT.includes(c.key);
+  return cols;
+}
+
+function loadCols() {
+  const cols = defaultCols();
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLS_KEY) || '{}');
+    // Only keys that still exist, so a stale entry from an older column set can
+    // never hide a column that has no checkbox left to switch it back on.
+    for (const c of ADMIN_COLUMNS) {
+      if (typeof saved[c.key] === 'boolean') cols[c.key] = saved[c.key];
+    }
+  } catch (e) {
+    // Corrupt entry — fall back to the defaults rather than showing an empty table.
+  }
+  return cols;
+}
+
 function adminApp() {
   return {
     denied: false,
+    columns: ADMIN_COLUMNS,
+    cols: loadCols(),
+    colPickerOpen: false,
     rows: [],
     total: 0,
     page: 1,
@@ -143,7 +188,39 @@ function adminApp() {
       }
     },
 
+    toggleCol(key) {
+      this.cols[key] = !this.cols[key];
+      this.saveCols();
+    },
+
+    resetCols() {
+      this.cols = defaultCols();
+      this.saveCols();
+    },
+
+    saveCols() {
+      try {
+        localStorage.setItem(COLS_KEY, JSON.stringify(this.cols));
+      } catch (e) {
+        // Private mode / full quota: the choice just does not survive a reload.
+      }
+    },
+
+    // Drives the colspan of the empty-state row, so it keeps spanning the table
+    // when columns are switched off.
+    get visibleColCount() {
+      return Object.values(this.cols).filter(Boolean).length || 1;
+    },
+
+    // Date only — the time lives in the cell's title attribute. The column used to
+    // be the widest in the table purely because of "00:00" that nobody sorts on.
     fmtDate(dt) {
+      return new Date(dt).toLocaleDateString('nl-BE', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+      });
+    },
+
+    fmtDateTime(dt) {
       return new Date(dt).toLocaleString('nl-BE', {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit',
