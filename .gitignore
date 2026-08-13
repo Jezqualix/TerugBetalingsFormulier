@@ -11,3 +11,4 @@ coverage/
 
 # OMC operational artifacts
 .omc/
+.gstack/
