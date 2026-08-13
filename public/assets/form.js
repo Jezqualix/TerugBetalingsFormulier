@@ -160,7 +160,11 @@ function formApp() {
     validate() {
       this.errors = {};
       if (!this.form.naam_aanvrager.trim()) this.errors.naam_aanvrager = true;
-      if (!this.form.email_aanvrager.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.form.email_aanvrager)) {
+      // Validate the trimmed address: an address pasted from Outlook or Excel carries
+      // a trailing space, and the regex rejects any whitespace. The server stores the
+      // trimmed value, so this checks exactly what gets stored.
+      const email = this.form.email_aanvrager.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         this.errors.email_aanvrager = this.t('invalidEmail');
       }
       if (!this.form.type_betaling) this.errors.type_betaling = true;

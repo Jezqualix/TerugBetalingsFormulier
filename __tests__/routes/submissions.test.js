@@ -2,10 +2,16 @@
 jest.mock('../../src/config/db');
 jest.mock('../../src/models/submission');
 jest.mock('../../src/services/mailService');
+// The real limiter allows 10 submits per 15 minutes per IP, and every test here posts
+// from the same address — past ten cases the suite would test the limiter instead of
+// the route. Its behaviour is verified against a running server, not here.
+jest.mock('../../src/middleware/rateLimiter', () => ({
+  submitLimiter: (req, res, next) => next(),
+}));
 
 const request = require('supertest');
 const app = require('../../src/server');
-const { createSubmission, createUploadRecord } = require('../../src/models/submission');
+const { createSubmissionWithUploads } = require('../../src/models/submission');
 const { sendAdminNotification, sendUserConfirmation } = require('../../src/services/mailService');
 
 describe('POST /api/submissions', () => {
@@ -14,8 +20,7 @@ describe('POST /api/submissions', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    createSubmission.mockResolvedValue(1);
-    createUploadRecord.mockResolvedValue();
+    createSubmissionWithUploads.mockResolvedValue(1);
     sendAdminNotification.mockResolvedValue();
     sendUserConfirmation.mockResolvedValue();
 
@@ -76,7 +81,128 @@ describe('POST /api/submissions', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.id).toBe(1);
-    expect(createSubmission).toHaveBeenCalledTimes(1);
+    expect(createSubmissionWithUploads).toHaveBeenCalledTimes(1);
+  });
+
+  // A field sent twice arrives as an array. Calling .trim() on it used to throw in the
+  // validation block, which sits outside try/catch: an unhandled rejection in an async
+  // Express 4 handler ends the Node process, so one request took the app down.
+  it('answers 422 instead of crashing when a field is sent twice', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Eerste')
+      .field('naam_aanvrager', 'Tweede')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'brandstof')
+      .field('naam_terugstorting', 'Recipient');
+
+    // First value wins, so this particular payload is simply valid.
+    expect(res.status).toBe(201);
+    expect(createSubmissionWithUploads).toHaveBeenCalledWith(
+      expect.objectContaining({ naam_aanvrager: 'Eerste' }),
+      []
+    );
+  });
+
+  it('answers 422 when a duplicated field leaves a required value empty', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', '')
+      .field('naam_aanvrager', 'Tweede')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'brandstof')
+      .field('naam_terugstorting', 'Recipient');
+
+    expect(res.status).toBe(422);
+    expect(res.body.errors.naam_aanvrager).toBeDefined();
+    expect(createSubmissionWithUploads).not.toHaveBeenCalled();
+  });
+
+  it('returns 422 for values wider than their column', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('aanvraagnummer', 'A'.repeat(101))
+      .field('naam_aanvrager', 'B'.repeat(256))
+      .field('email_aanvrager', `${'c'.repeat(250)}@example.com`)
+      .field('type_betaling', 'brandstof')
+      .field('naam_terugstorting', 'D'.repeat(256))
+      .field('iban', 'BE68'.padEnd(40, '1'));
+
+    expect(res.status).toBe(422);
+    for (const field of ['aanvraagnummer', 'naam_aanvrager', 'email_aanvrager', 'naam_terugstorting', 'iban']) {
+      expect(res.body.errors[field]).toMatch(/Maximaal \d+ tekens/);
+    }
+    expect(createSubmissionWithUploads).not.toHaveBeenCalled();
+  });
+
+  // new Date('2026-02-30') rolls over to 2 March, so an unchecked date is stored as a
+  // different, plausible looking one.
+  it('rejects a date that does not exist', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Test User')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'boete')
+      .field('naam_terugstorting', 'Recipient')
+      .field('referentie_boete', 'REF-1')
+      .field('vervaldatum_boete', '2026-02-30');
+
+    expect(res.status).toBe(422);
+    expect(res.body.errors.vervaldatum_boete).toBeDefined();
+    expect(createSubmissionWithUploads).not.toHaveBeenCalled();
+  });
+
+  it.each(['31-12-2026', 'morgen', '2026-13-01', '2026-2-3'])('rejects malformed date %s', async (value) => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Test User')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'boete')
+      .field('naam_terugstorting', 'Recipient')
+      .field('referentie_boete', 'REF-1')
+      .field('vervaldatum_boete', value);
+
+    expect(res.status).toBe(422);
+    expect(res.body.errors.vervaldatum_boete).toBeDefined();
+  });
+
+  it('accepts a real date', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', 'Test User')
+      .field('email_aanvrager', 'test@example.com')
+      .field('type_betaling', 'boete')
+      .field('naam_terugstorting', 'Recipient')
+      .field('referentie_boete', 'REF-1')
+      .field('vervaldatum_boete', '2026-02-28');
+
+    expect(res.status).toBe(201);
+    expect(createSubmissionWithUploads).toHaveBeenCalledWith(
+      expect.objectContaining({ vervaldatum_boete: '2026-02-28' }),
+      []
+    );
+  });
+
+  it('accepts an address with surrounding whitespace and stores it trimmed', async () => {
+    const res = await agent
+      .post('/api/submissions')
+      .set('x-csrf-token', csrfToken)
+      .field('naam_aanvrager', '  Test User  ')
+      .field('email_aanvrager', '  TEST.User@Example.COM  ')
+      .field('type_betaling', 'brandstof')
+      .field('naam_terugstorting', 'Recipient');
+
+    expect(res.status).toBe(201);
+    expect(createSubmissionWithUploads).toHaveBeenCalledWith(
+      expect.objectContaining({ email_aanvrager: 'test.user@example.com', naam_aanvrager: 'Test User' }),
+      []
+    );
   });
 
   it('stores the IBAN without separators and upper case', async () => {
@@ -91,8 +217,9 @@ describe('POST /api/submissions', () => {
       .field('iban', ' be68 5390 0754 7034 ');
 
     expect(res.status).toBe(201);
-    expect(createSubmission).toHaveBeenCalledWith(
-      expect.objectContaining({ iban: 'BE68539007547034' })
+    expect(createSubmissionWithUploads).toHaveBeenCalledWith(
+      expect.objectContaining({ iban: 'BE68539007547034' }),
+      []
     );
   });
 
@@ -107,8 +234,9 @@ describe('POST /api/submissions', () => {
       .field('iban', '   ');
 
     expect(res.status).toBe(201);
-    expect(createSubmission).toHaveBeenCalledWith(
-      expect.objectContaining({ iban: null })
+    expect(createSubmissionWithUploads).toHaveBeenCalledWith(
+      expect.objectContaining({ iban: null }),
+      []
     );
   });
 
