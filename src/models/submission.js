@@ -4,10 +4,11 @@ const {
   devUpdateStatus, devCreateSubmission, devCreateUpload,
 } = require('../dev/devStore');
 
-async function createSubmission(data) {
-  if (isDevMode()) return devCreateSubmission(data);
-  const pool = await getPool();
-  const result = await pool.request()
+// Parameter binding and the statement are split off from createSubmission so the
+// exact same insert can run on a pool request or inside a transaction — see
+// createSubmissionWithUploads.
+function bindSubmission(request, data) {
+  return request
     .input('aanvraagnummer',     sql.NVarChar(100),  data.aanvraagnummer || null)
     .input('naam_aanvrager',     sql.NVarChar(255),  data.naam_aanvrager)
     .input('email_aanvrager',    sql.NVarChar(255),  data.email_aanvrager)
@@ -23,8 +24,11 @@ async function createSubmission(data) {
     .input('vervaldatum_boete',           sql.Date,              data.vervaldatum_boete || null)
     .input('gedetailleerde_omschrijving', sql.NVarChar(sql.MAX), data.gedetailleerde_omschrijving || null)
     .input('onkosten_items',             sql.NVarChar(sql.MAX), data.onkosten_items || null)
-    .input('proplanner_aangevraagd',     sql.Bit,               data.proplanner_aangevraagd ? 1 : 0)
-    .query(`
+    .input('proplanner_aangevraagd',     sql.Bit,               data.proplanner_aangevraagd ? 1 : 0);
+}
+
+function submissionInsertSql() {
+  return `
       INSERT INTO ${qualify('submissions')}
         (aanvraagnummer, naam_aanvrager, email_aanvrager, type_betaling,
          naam_terugstorting, iban, omschrijving, taal,
@@ -36,23 +40,67 @@ async function createSubmission(data) {
          @naam_terugstorting, @iban, @omschrijving, @taal,
          @reden_urgentie, @contract, @klant, @referentie_boete, @vervaldatum_boete,
          @gedetailleerde_omschrijving, @onkosten_items, @proplanner_aangevraagd)
-    `);
+    `;
+}
+
+function bindUpload(request, data) {
+  return request
+    .input('submission_id', sql.Int,           data.submission_id)
+    .input('original_name', sql.NVarChar(255), data.original_name)
+    .input('stored_name',   sql.NVarChar(255), data.stored_name)
+    .input('mime_type',     sql.NVarChar(100), data.mime_type)
+    .input('size_bytes',    sql.Int,           data.size_bytes);
+}
+
+function uploadInsertSql() {
+  return `
+      INSERT INTO ${qualify('uploads')} (submission_id, original_name, stored_name, mime_type, size_bytes)
+      VALUES (@submission_id, @original_name, @stored_name, @mime_type, @size_bytes)
+    `;
+}
+
+async function createSubmission(data) {
+  if (isDevMode()) return devCreateSubmission(data);
+  const pool = await getPool();
+  const result = await bindSubmission(pool.request(), data).query(submissionInsertSql());
   return result.recordset[0].id;
 }
 
 async function createUploadRecord(data) {
   if (isDevMode()) return devCreateUpload(data);
   const pool = await getPool();
-  await pool.request()
-    .input('submission_id', sql.Int,           data.submission_id)
-    .input('original_name', sql.NVarChar(255), data.original_name)
-    .input('stored_name',   sql.NVarChar(255), data.stored_name)
-    .input('mime_type',     sql.NVarChar(100), data.mime_type)
-    .input('size_bytes',    sql.Int,           data.size_bytes)
-    .query(`
-      INSERT INTO ${qualify('uploads')} (submission_id, original_name, stored_name, mime_type, size_bytes)
-      VALUES (@submission_id, @original_name, @stored_name, @mime_type, @size_bytes)
-    `);
+  await bindUpload(pool.request(), data).query(uploadInsertSql());
+}
+
+// Submission plus its uploads, all or nothing. Written as one transaction because
+// inserting them separately could leave a submission with no upload rows while the
+// user got an error and re-submitted, producing a duplicate request.
+async function createSubmissionWithUploads(data, uploads = []) {
+  if (isDevMode()) {
+    const id = devCreateSubmission(data);
+    for (const file of uploads) devCreateUpload({ ...file, submission_id: id });
+    return id;
+  }
+
+  const pool = await getPool();
+  const transaction = new sql.Transaction(pool);
+  await transaction.begin();
+  try {
+    const result = await bindSubmission(new sql.Request(transaction), data).query(submissionInsertSql());
+    const id = result.recordset[0].id;
+    for (const file of uploads) {
+      await bindUpload(new sql.Request(transaction), { ...file, submission_id: id }).query(uploadInsertSql());
+    }
+    await transaction.commit();
+    return id;
+  } catch (err) {
+    // Rolling back can itself fail if the connection is gone; the original error is
+    // the one worth reporting.
+    try { await transaction.rollback(); } catch (rollbackErr) {
+      console.error('Rollback failed:', rollbackErr.message);
+    }
+    throw err;
+  }
 }
 
 async function updateSubmissionStatus(id, status) {
@@ -171,6 +219,7 @@ async function getSubmissionsForExport({ from, to, status } = {}) {
 module.exports = {
   createSubmission,
   createUploadRecord,
+  createSubmissionWithUploads,
   updateSubmissionStatus,
   getUploadsForSubmission,
   listSubmissions,

@@ -43,6 +43,69 @@ describe('createSubmission', () => {
   });
 });
 
+// The schema guard in submission.schema.test.js covers the SQL text: this function
+// reuses the same statement builders as createSubmission/createUploadRecord, so what
+// is left to prove here is the all-or-nothing behaviour.
+describe('createSubmissionWithUploads', () => {
+  function mockTransaction({ failOnQueryNumber } = {}) {
+    const transaction = {
+      begin: jest.fn().mockResolvedValue(),
+      commit: jest.fn().mockResolvedValue(),
+      rollback: jest.fn().mockResolvedValue(),
+    };
+    let call = 0;
+    Object.assign(sql, {
+      NVarChar: jest.fn((n) => `NVarChar(${n})`),
+      Int: 'Int', Bit: 'Bit', Date: 'Date', MAX: 'MAX',
+      Transaction: jest.fn(() => transaction),
+      Request: jest.fn(() => {
+        const req = {
+          input: jest.fn(),
+          query: jest.fn(() => {
+            call += 1;
+            if (call === failOnQueryNumber) return Promise.reject(new Error('String or binary data would be truncated'));
+            return Promise.resolve({ recordset: [{ id: 7 }] });
+          }),
+        };
+        req.input.mockReturnValue(req);
+        return req;
+      }),
+    });
+    getPool.mockResolvedValue({});
+    return transaction;
+  }
+
+  const submission = {
+    naam_aanvrager: 'Test User',
+    email_aanvrager: 'test@example.com',
+    type_betaling: 'brandstof',
+    naam_terugstorting: 'Recipient',
+  };
+  const upload = { original_name: 'bon.png', stored_name: 'uuid.png', mime_type: 'image/png', size_bytes: 70 };
+
+  it('commits the submission together with its uploads', async () => {
+    const transaction = mockTransaction();
+    const { createSubmissionWithUploads } = require('../../src/models/submission');
+
+    const id = await createSubmissionWithUploads(submission, [upload, upload]);
+
+    expect(id).toBe(7);
+    expect(transaction.begin).toHaveBeenCalledTimes(1);
+    expect(transaction.commit).toHaveBeenCalledTimes(1);
+    expect(transaction.rollback).not.toHaveBeenCalled();
+    expect(sql.Request).toHaveBeenCalledTimes(3); // 1 submission + 2 uploads
+  });
+
+  it('rolls back the submission when an upload row fails', async () => {
+    const transaction = mockTransaction({ failOnQueryNumber: 2 });
+    const { createSubmissionWithUploads } = require('../../src/models/submission');
+
+    await expect(createSubmissionWithUploads(submission, [upload])).rejects.toThrow(/truncated/);
+    expect(transaction.commit).not.toHaveBeenCalled();
+    expect(transaction.rollback).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('createUploadRecord', () => {
   it('inserts an upload record without throwing', async () => {
     const mockReq = makeMockRequest({ recordset: [] });
