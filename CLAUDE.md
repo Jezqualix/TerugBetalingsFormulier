@@ -224,24 +224,40 @@ Niet-obvious punten die hierbij horen:
   alleen dat de gebruiker ziet wat er bewaard wordt. Nieuw type-specifiek veld = beide
   lijsten bijwerken.
 - **`__tests__/routes/submissions.test.js` mockt de rate limiter.** De suite doet meer
-  dan tien submits vanaf hetzelfde IP; zonder die mock test je de limiter in plaats van
-  de route. De echte limiter is tegen een lopende server gecontroleerd (10× 201, 11e 429).
-- Tests: **115** in 14 suites.
+  submits dan het quotum toelaat; zonder die mock test je de limiter in plaats van de
+  route. De limiter zelf heeft een eigen suite
+  (`__tests__/middleware/rateLimiter.test.js`) die de echte middleware gebruikt.
+- Tests: **122** in 15 suites.
 
-### Productie: rate limit is niet per gebruiker
+### Rate limit: per gebruiker, 25 per 15 minuten
 
-`src/server.js` zet `trust proxy 1`, dus `req.ip` komt uit `X-Forwarded-For`, en op
-Container Apps bepaalt de ingress die laatste waarde. Gevolg: een client kan zijn IP
-niet faken (handig om te weten bij testen), maar collega's achter hetzelfde publieke
-kantoor-IP delen ook dezelfde teller van 10 per 15 minuten. Wie dit wil verbeteren:
-limiteren op de Easy-Auth-identiteit in plaats van op IP (`src/middleware/rateLimiter.js`).
+`src/middleware/rateLimiter.js` telt op de Easy-Auth-UPN uit
+`x-ms-client-principal-name` (in kleine letters), met `req.ip` als terugval voor lokaal
+draaien en de tests. Easy Auth strijkt een door de client meegestuurde variant van die
+header weg, dus die is niet te vervalsen zolang de container enkel daarachter bereikbaar
+is. `skipFailedRequests` staat aan: geweigerde inzendingen verbruiken het quotum niet,
+want de limiter hangt vóór de validatie (`src/routes/submissions.js`, nog vóór CSRF en
+multer) en anders blokkeert een reeks tikfouten de eerstvolgende correcte inzending.
+`WINDOW_MS` en `MAX_SUBMISSIONS` staan bovenaan het bestand en worden geëxporteerd, dus
+de limiet bijstellen vraagt geen testaanpassing.
+
+Twee dingen om te weten. De teller staat in het geheugen van het proces (`MemoryStore`),
+dus bij meerdere replica's houdt elke replica een eigen teller en wist elke deploy ze —
+de limiet is in de praktijk losser dan 25. En omdat geweigerde requests niet meetellen,
+worden die ook nooit geremd; ze komen wél tot aan multer.
+
+Historisch: hiervóór was er geen `keyGenerator`, dus `req.ip`. `src/server.js` zet
+`trust proxy 1` en op Container Apps bepaalt de ingress die waarde, dus een client kan
+zijn IP niet faken (handig bij testen) maar collega's achter hetzelfde kantoor-NAT
+deelden één teller van 10 per 15 minuten.
 
 ### Nog open na deze ronde
 
 - Geen magic-byte-controle op bijlagen: een `MZ`-binary onder de naam `.png` met mimetype
   `image/png` wordt aanvaard (`src/middleware/upload.js` kijkt naar extensie + opgegeven
   mimetype). Bestanden zijn niet publiek bereikbaar en downloads zitten achter admin-auth.
-- Rate limit per IP (zie hierboven).
+- Rate limit staat per gebruiker maar de teller is per proces; bij opschalen naar
+  meerdere replica's telt elke replica apart (zie hierboven).
 - Testrijen `id 4` t/m `15` staan nog in productie, herkenbaar aan `TEST-` in naam
   aanvrager en begunstigde.
 
