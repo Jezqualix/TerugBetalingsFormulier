@@ -253,13 +253,10 @@ deelden één teller van 10 per 15 minuten.
 
 ### Nog open na deze ronde
 
-- Geen magic-byte-controle op bijlagen: een `MZ`-binary onder de naam `.png` met mimetype
-  `image/png` wordt aanvaard (`src/middleware/upload.js` kijkt naar extensie + opgegeven
-  mimetype). Bestanden zijn niet publiek bereikbaar en downloads zitten achter admin-auth.
-- Rate limit staat per gebruiker maar de teller is per proces; bij opschalen naar
-  meerdere replica's telt elke replica apart (zie hierboven).
-- Testrijen `id 4` t/m `15` staan nog in productie, herkenbaar aan `TEST-` in naam
-  aanvrager en begunstigde.
+Staat in **`TODOS.md`**, met prioriteit en context per punt. Kort: geen
+magic-byte-controle op bijlagen (P2), rate-limitteller per proces i.p.v. gedeeld (P3),
+en testrijen `id 4` t/m `15` die nog in productie staan (P2). Eén lijst, hier alleen
+een verwijzing — anders lopen de twee uit elkaar.
 
 ### Testharnas
 
